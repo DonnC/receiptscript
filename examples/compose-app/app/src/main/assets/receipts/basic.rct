@@ -1,0 +1,12 @@
+receipt "basic"
+meta:
+  width: 32
+  font: 24
+center bold "{{merchant.name}}"
+kv "DATE" "{{txn.date | datetime}}"
+kv "RECEIPT" "{{txn.reference}}"
+divider "_"
+center "{{txn.title}}"
+center bold "{{txn.total | money:txn.currency}}" 30
+divider "_"
+center small "Thank you!"

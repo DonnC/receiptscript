@@ -20,7 +20,7 @@ tasks.withType<Jar>().configureEach {
     isPreserveFileTimestamps = false
     isReproducibleFileOrder = true
 }
-tasks.jar { from(rootProject.file("LICENSE")) { into("META-INF") } }
+tasks.jar { from(project.file("../LICENSE")) { into("META-INF") } }
 kotlin.sourceSets.named("test") { kotlin.srcDir("../examples/kotlin") }
 tasks.test { testLogging { events("failed", "skipped") } }
 publishing {

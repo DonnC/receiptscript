@@ -189,4 +189,4 @@ object RctLexerScanner {
 
 private fun Char.isIdentifierStart(): Boolean = isLetter() || this == '_' || this == '@'
 
-private fun Char.isIdentifierPart(): Boolean = isLetterOrDigit() || this == '_' || this == '@'
+private fun Char.isIdentifierPart(): Boolean = isLetterOrDigit() || this == '_' || this == '@' || this == '.'

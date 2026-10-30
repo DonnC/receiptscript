@@ -7,6 +7,14 @@ import org.junit.Test
 class RctLexerScannerTest {
 
     @Test
+    fun `nested collection paths are valid outside quoted bindings`() {
+        val source = "for record in group.records:"
+        val tokens = RctLexerScanner.scan(source)
+        assertTrue(tokens.none { it.type == RctHighlightTokenType.BAD_CHARACTER })
+        assertTrue(tokens.any { it.type == RctHighlightTokenType.IDENTIFIER && it.text(source) == "group.records" })
+    }
+
+    @Test
     fun `scanner should classify core receipt keywords`() {
         val source = """
             receipt "sale-default"

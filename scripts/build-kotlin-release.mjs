@@ -61,6 +61,7 @@ async function dependency(entry) {
 async function files(directory) {
   const output = [];
   for (const entry of await readdir(directory, {withFileTypes: true})) {
+    if (["build", ".gradle", ".kotlin", ".idea", "local.properties"].includes(entry.name)) continue;
     const file = join(directory, entry.name);
     if (entry.isDirectory()) output.push(...await files(file));
     else output.push(file);

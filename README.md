@@ -25,6 +25,53 @@ target JVM 11; Android below API 26 needs Java time desugaring.
 
 ## 1. Design the receipt
 
+### Run the Android starter
+
+Open [`examples/compose-app`](examples/compose-app) as a project in Android Studio
+(JDK 17, Android SDK 36), then run the `app` configuration on an API 26+ emulator
+or device. It is a standalone Jetpack Compose app, not a change to your POS app.
+From that directory you can also run `./gradlew :app:assembleDebug :app:testDebugUnitTest`
+(`.\gradlew.bat` in PowerShell).
+
+The gallery contains seven working examples: a basic receipt, bank-style card
+payment, SME basket, discounted sale, shared header/footer, fiscal-style invoice,
+and a long multi-currency report. Each opens a receipt preview, its actual `.rct`
+source, and the companion JSON. All examples use synthetic data; the fiscal sample
+does not sign, submit or certify a fiscal document.
+
+Templates and preview data live together in
+[`app/src/main/assets/receipts`](examples/compose-app/app/src/main/assets/receipts).
+You can open those same files in the VS Code extension. `SampleCatalog` renders
+them through the real Kotlin engine; `ReceiptPreview` displays that resolved
+`Receipt`, rather than a separately designed mock receipt. Android Studio also
+has gallery and bank-receipt `@Preview` functions.
+
+To print, replace `connectedPrinter()` in
+[`SamplePrinter.kt`](examples/compose-app/app/src/main/java/dev/receiptscript/sample/SamplePrinter.kt)
+with your integration. For example, for an already connected ESC/POS transport:
+
+```kotlin
+fun connectedPrinter(): SamplePrinter = SamplePrinter { receipt ->
+    withContext(Dispatchers.IO) {
+        ReceiptPrinter(EscPosDriver(), yourPrinterConnection).print(receipt)
+    }
+}
+```
+
+For an SDK printer call `receipt.render(yourReceiptDriver)` and await the SDK's
+completion callback. The button passes the **same Receipt object** currently
+shown. No printer is configured by default, and the sample never pretends to
+print successfully. Implement permissions, pairing and status handling for your
+chosen device using the integrations in step 3. The app has no network or
+Bluetooth permissions until you add a transport.
+
+The starter builds the local library modules so it runs directly from this
+checkout. Inside the binary ZIP it automatically uses the bundled JARs instead.
+In your own app, use release JARs as shown above. Its Android
+build is separate, so engine and extension contributors do not need an Android SDK.
+
+### Edit and preview a template
+
 Install the release `.vsix` using VS Code's **Extensions: Install from VSIX**.
 Open an `.rct` file and run **RCT: Open Preview**. A companion
 `sale.preview.json` provides sample values using the same fields as your Kotlin

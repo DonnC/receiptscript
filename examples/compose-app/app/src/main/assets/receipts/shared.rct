@@ -1,0 +1,11 @@
+receipt "shared"
+meta:
+  width: 32
+  font: 24
+use header "merchant-header"
+use footer "customer-footer"
+body:
+  kv "REFERENCE" "{{txn.reference}}"
+  divider "_"
+  center bold "{{txn.title}}"
+  kv bold "PAID" "{{txn.total | money:txn.currency}}"

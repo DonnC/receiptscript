@@ -1,0 +1,4 @@
+image "{{merchant.logo}}" 80 80
+center bold "{{merchant.name}}"
+center small "{{merchant.address}}"
+divider "_"

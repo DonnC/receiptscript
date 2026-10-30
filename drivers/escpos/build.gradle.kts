@@ -23,7 +23,7 @@ tasks.withType<Jar>().configureEach {
     isPreserveFileTimestamps = false
     isReproducibleFileOrder = true
 }
-tasks.jar { from(rootProject.file("LICENSE")) { into("META-INF") } }
+tasks.jar { from(project.file("../../LICENSE")) { into("META-INF") } }
 publishing {
     publications {
         create<MavenPublication>("escpos") {

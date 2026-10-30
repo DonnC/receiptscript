@@ -1,0 +1,27 @@
+receipt "bank"
+meta:
+  width: 32
+  font: 24
+  copy: "customer"
+header:
+  center bold "{{merchant.name}}"
+  center small "{{merchant.address}}"
+body:
+  kv "TID" "{{terminal.tid}}"
+  kv "MID" "{{terminal.mid}}"
+  divider "_"
+  kv "DATE" "{{txn.date | datetime}}"
+  kv "INVOICE" "{{txn.reference}}"
+  kv "STAN" "{{card.stan}}"
+  kv "RRN" "{{card.rrn}}"
+  divider "-" 24
+  kv "CARD" "{{card.pan | maskPan}}"
+  kv "ENTRY" "{{card.entry}}"
+  center bold "{{txn.title}}"
+  center bold "{{txn.total | money:txn.currency}}" 30
+  divider "_"
+  center bold "{{card.result}}"
+  kv "AUTH CODE" "{{card.auth}}"
+footer:
+  center "CUSTOMER COPY"
+  center small "DEMONSTRATION ONLY"

@@ -1,0 +1,29 @@
+receipt "complex"
+meta:
+  width: 42
+  paper: "80mm"
+  font: 24
+use header "merchant-header"
+body:
+  center bold "DAILY OPERATIONS"
+  kv "DATE" "{{txn.date | datetime}}"
+  kv "BATCH" "{{batch}}"
+  kv "OPERATOR" "{{cashier}}"
+  divider "_"
+  for group in currencies:
+    center bold "CURRENCY: {{group.currency}}"
+    table:
+      headers: "REF" "METHOD" "STATUS" "AMOUNT"
+      weights: 2 2 2 3
+      alignments: start start center end
+      for record in group.records:
+        row "{{record.ref}}" "{{record.method}}" "{{record.status}}" "{{record.amount | money:group.currency}}"
+    kv bold "APPROVED TOTAL" "{{group.total | money:group.currency}}"
+    divider "_"
+  center underline "RECONCILIATION"
+  center small "Declined entries excluded from totals."
+  center small "Currencies reported independently."
+footer:
+  center "Prepared by {{cashier}}"
+  spacer 2
+  center "SIGNATURE: __________________"

@@ -1,0 +1,40 @@
+plugins {
+    id("com.android.application")
+    kotlin("android")
+    id("org.jetbrains.kotlin.plugin.compose")
+}
+android {
+    namespace = "dev.receiptscript.sample"
+    compileSdk = 36
+    defaultConfig {
+        applicationId = "dev.receiptscript.sample"
+        minSdk = 26
+        targetSdk = 36
+        versionCode = 1
+        versionName = "0.3.0"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+    buildFeatures { compose = true }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+    }
+}
+kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11) } }
+dependencies {
+    if (findProject(":kotlin") != null) {
+        implementation(project(":kotlin"))
+        implementation(project(":drivers:escpos"))
+    } else {
+        implementation(files(rootProject.file("../../lib/receiptscript-core-0.3.0.jar")))
+        implementation(files(rootProject.file("../../lib/receiptscript-escpos-0.3.0.jar")))
+    }
+    implementation(platform("androidx.compose:compose-bom:2026.09.00"))
+    implementation("androidx.activity:activity-compose:1.12.4")
+    implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    debugImplementation("androidx.compose.ui:ui-tooling")
+    implementation("com.google.zxing:core:3.5.3")
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.json:json:20240303")
+}

@@ -1,0 +1,23 @@
+receipt "discount"
+meta:
+  width: 32
+  font: 24
+use header "merchant-header"
+body:
+  center bold "WEEKEND SAVINGS"
+  kv "RECEIPT" "{{txn.reference}}"
+  divider "_"
+  table:
+    headers: "ITEM" "WAS" "NOW"
+    weights: 3 2 2
+    alignments: start end end
+    for item in items:
+      row "{{item.name}}" "{{item.original | money:txn.currency}}" "{{item.total | money:txn.currency}}"
+  divider "_"
+  kv "BEFORE DISCOUNT" "{{txn.original | money:txn.currency}}"
+  kv "YOU SAVED" "{{txn.savings | money:txn.currency}}"
+  kv bold "TOTAL (TAX INCL.)" "{{txn.total | money:txn.currency}}"
+  if promotion:
+    center small "{{promotion}}"
+footer:
+  center "Keep this receipt for returns."

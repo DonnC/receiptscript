@@ -1,0 +1,28 @@
+receipt "fiscal"
+meta:
+  width: 32
+  font: 24
+use header "merchant-header"
+body:
+  center bold "FISCAL INVOICE - DEMO"
+  kv "TIN" "{{fiscal.tin}}"
+  kv "DEVICE" "{{fiscal.device}}"
+  kv "INVOICE" "{{txn.reference}}"
+  kv "DATE" "{{txn.date | datetime}}"
+  divider "_"
+  table:
+    headers: "ITEM" "QTY" "TOTAL"
+    weights: 4 1 3
+    alignments: start center end
+    for item in items:
+      row "{{item.name}}" "{{item.qty}}" "{{item.total | money:txn.currency}}"
+  divider "_"
+  kv "NET" "{{txn.subtotal | money:txn.currency}}"
+  kv "VAT (15%)" "{{txn.tax | money:txn.currency}}"
+  kv bold "GROSS" "{{txn.total | money:txn.currency}}"
+  kv "FISCAL COUNTER" "{{fiscal.counter}}"
+  kv "VERIFICATION" "{{fiscal.code}}"
+  qr "{{fiscal.url}}" 200
+footer:
+  center small "NOT A VALID FISCAL DOCUMENT"
+  center small "Example identifiers and QR only."

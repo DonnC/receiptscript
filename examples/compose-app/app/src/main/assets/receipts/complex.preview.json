@@ -1,0 +1,222 @@
+{
+  "merchant": {
+    "name": "MAVAMBO MARKET",
+    "address": "12 Samora Machel Ave, Harare",
+    "logo": "logo.png"
+  },
+  "terminal": {
+    "tid": "T0000421",
+    "mid": "M0000719"
+  },
+  "txn": {
+    "date": "2026-10-30T14:25:36",
+    "reference": "RCT-001042",
+    "title": "SALE",
+    "currency": "USD",
+    "subtotal": "20.00",
+    "tax": "3.00",
+    "total": "23.00",
+    "original": "27.00",
+    "savings": "4.00"
+  },
+  "cashier": "Tariro M.",
+  "payment": {
+    "tendered": "25.00",
+    "change": "2.00"
+  },
+  "items": [
+    {
+      "name": "Maize meal 2kg",
+      "qty": 1,
+      "original": "10.00",
+      "total": "8.00"
+    },
+    {
+      "name": "Cooking oil 2L",
+      "qty": 1,
+      "original": "11.00",
+      "total": "10.00"
+    },
+    {
+      "name": "Bread x2",
+      "qty": 2,
+      "original": "6.00",
+      "total": "5.00"
+    }
+  ],
+  "promotion": "You saved USD 4.00 today!",
+  "card": {
+    "pan": "4506123456787890",
+    "entry": "CHIP / EMV",
+    "stan": "001042",
+    "rrn": "630314001042",
+    "auth": "123456",
+    "result": "APPROVED"
+  },
+  "fiscal": {
+    "tin": "DEMO-000000",
+    "device": "DEMO-FD-042",
+    "counter": "000142",
+    "code": "DEMO-7B29-4C81",
+    "url": "https://example.com/verify/DEMO-000142"
+  },
+  "batch": "BTH-20261030-001",
+  "currencies": [
+    {
+      "currency": "USD",
+      "records": [
+        {
+          "ref": "1001",
+          "method": "Card",
+          "status": "OK",
+          "amount": "1.00"
+        },
+        {
+          "ref": "1002",
+          "method": "Cash",
+          "status": "OK",
+          "amount": "2.00"
+        },
+        {
+          "ref": "1003",
+          "method": "Wallet",
+          "status": "OK",
+          "amount": "3.00"
+        },
+        {
+          "ref": "1004",
+          "method": "Card",
+          "status": "OK",
+          "amount": "4.00"
+        },
+        {
+          "ref": "1005",
+          "method": "Cash",
+          "status": "OK",
+          "amount": "5.00"
+        },
+        {
+          "ref": "1006",
+          "method": "Wallet",
+          "status": "OK",
+          "amount": "6.00"
+        },
+        {
+          "ref": "1007",
+          "method": "Card",
+          "status": "OK",
+          "amount": "7.00"
+        },
+        {
+          "ref": "1008",
+          "method": "Cash",
+          "status": "DECL",
+          "amount": "8.00"
+        },
+        {
+          "ref": "1009",
+          "method": "Wallet",
+          "status": "OK",
+          "amount": "9.00"
+        },
+        {
+          "ref": "1010",
+          "method": "Card",
+          "status": "OK",
+          "amount": "10.00"
+        },
+        {
+          "ref": "1011",
+          "method": "Cash",
+          "status": "OK",
+          "amount": "11.00"
+        },
+        {
+          "ref": "1012",
+          "method": "Wallet",
+          "status": "OK",
+          "amount": "12.00"
+        }
+      ],
+      "total": "70.00"
+    },
+    {
+      "currency": "ZWG",
+      "records": [
+        {
+          "ref": "2001",
+          "method": "Card",
+          "status": "OK",
+          "amount": "1.00"
+        },
+        {
+          "ref": "2002",
+          "method": "Cash",
+          "status": "OK",
+          "amount": "2.00"
+        },
+        {
+          "ref": "2003",
+          "method": "Wallet",
+          "status": "OK",
+          "amount": "3.00"
+        },
+        {
+          "ref": "2004",
+          "method": "Card",
+          "status": "OK",
+          "amount": "4.00"
+        },
+        {
+          "ref": "2005",
+          "method": "Cash",
+          "status": "OK",
+          "amount": "5.00"
+        },
+        {
+          "ref": "2006",
+          "method": "Wallet",
+          "status": "OK",
+          "amount": "6.00"
+        },
+        {
+          "ref": "2007",
+          "method": "Card",
+          "status": "OK",
+          "amount": "7.00"
+        },
+        {
+          "ref": "2008",
+          "method": "Cash",
+          "status": "DECL",
+          "amount": "8.00"
+        },
+        {
+          "ref": "2009",
+          "method": "Wallet",
+          "status": "OK",
+          "amount": "9.00"
+        },
+        {
+          "ref": "2010",
+          "method": "Card",
+          "status": "OK",
+          "amount": "10.00"
+        },
+        {
+          "ref": "2011",
+          "method": "Cash",
+          "status": "OK",
+          "amount": "11.00"
+        },
+        {
+          "ref": "2012",
+          "method": "Wallet",
+          "status": "OK",
+          "amount": "12.00"
+        }
+      ],
+      "total": "70.00"
+    }
+  ]
+}
