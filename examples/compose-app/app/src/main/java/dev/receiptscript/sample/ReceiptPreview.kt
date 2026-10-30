@@ -31,8 +31,9 @@ import zw.co.donnclab.rct.*
 fun ReceiptPreview(receipt: Receipt, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     BoxWithConstraints(modifier.background(Color.White).padding(18.dp)) {
+        val paperWidth = maxWidth.value
         val columns = receipt.meta?.width ?: 32
-        val base = maxWidth.value / (columns * 0.6f)
+        val base = paperWidth / (columns * 0.6f)
         val metaFont = receipt.meta?.font ?: 24f
         val paperDots = if (receipt.meta?.paper == "80mm") 576f else 384f
         fun textStyle(style: ReceiptTextStyle = ReceiptTextStyle()): TextStyle {
@@ -96,12 +97,12 @@ fun ReceiptPreview(receipt: Receipt, modifier: Modifier = Modifier) {
                             }.asImageBitmap()
                         }
                         Image(bitmap, "Merchant logo", Modifier
-                            .width((maxWidth.value * (block.width ?: 80) / paperDots).dp)
-                            .height((maxWidth.value * (block.height ?: 80) / paperDots).dp), contentScale = ContentScale.Fit)
+                            .width((paperWidth * (block.width ?: 80) / paperDots).dp)
+                            .height((paperWidth * (block.height ?: 80) / paperDots).dp), contentScale = ContentScale.Fit)
                     }
                     is ReceiptBlock.QrCode -> {
                         val bitmap = remember(block) { encodeCode(block.content, ZxingFormat.QR_CODE, block.size, block.size).asImageBitmap() }
-                        Image(bitmap, "QR: ${block.content}", Modifier.size((maxWidth.value * block.size / paperDots).coerceAtMost(maxWidth.value).dp))
+                        Image(bitmap, "QR: ${block.content}", Modifier.size((paperWidth * block.size / paperDots).coerceAtMost(paperWidth).dp))
                     }
                     is ReceiptBlock.Barcode -> {
                         val bitmap = remember(block) { encodeCode(block.content, ZxingFormat.valueOf(when (block.format) {
@@ -113,8 +114,8 @@ fun ReceiptPreview(receipt: Receipt, modifier: Modifier = Modifier) {
                             BarcodeFormat.ITF -> "ITF"
                         }), block.width, block.height).asImageBitmap() }
                         Image(bitmap, "Barcode: ${block.content}", Modifier
-                            .width((maxWidth.value * block.width / paperDots).coerceAtMost(maxWidth.value).dp)
-                            .height((maxWidth.value * block.height / paperDots).dp), contentScale = ContentScale.FillBounds)
+                            .width((paperWidth * block.width / paperDots).coerceAtMost(paperWidth).dp)
+                            .height((paperWidth * block.height / paperDots).dp), contentScale = ContentScale.FillBounds)
                     }
                 }
             }

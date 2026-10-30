@@ -24,7 +24,7 @@ fun connectedPrinter(context: Context): SamplePrinter? = null
 
 /** Reuses the preview's logo assets. The host owns connection permissions and lifecycle. */
 fun escPosPrinter(context: Context, connection: PrinterConnection,
-                  profile: EscPosProfile = EscPosProfile()): SamplePrinter {
+                  profile: EscPosProfile = EscPosProfile.Portable58): SamplePrinter {
     val assets = context.applicationContext.assets
     val driver = EscPosDriver(profile, images = { source ->
         assets.open("receipts/${source.removePrefix("asset:")}").use { stream ->
