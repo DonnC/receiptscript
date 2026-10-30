@@ -31,7 +31,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContent { StarterTheme { ReceiptGallery(connectedPrinter()) } }
+        setContent {
+            val printer = remember { connectedPrinter(this@MainActivity) }
+            StarterTheme { ReceiptGallery(printer) }
+        }
     }
 }
 

@@ -46,17 +46,18 @@ them through the real Kotlin engine; `ReceiptPreview` displays that resolved
 `Receipt`, rather than a separately designed mock receipt. Android Studio also
 has gallery and bank-receipt `@Preview` functions.
 
-To print, replace `connectedPrinter()` in
+To print, replace `connectedPrinter(context)` in
 [`SamplePrinter.kt`](examples/compose-app/app/src/main/java/dev/receiptscript/sample/SamplePrinter.kt)
 with your integration. For example, for an already connected ESC/POS transport:
 
 ```kotlin
-fun connectedPrinter(): SamplePrinter = SamplePrinter { receipt ->
-    withContext(Dispatchers.IO) {
-        ReceiptPrinter(EscPosDriver(), yourPrinterConnection).print(receipt)
-    }
-}
+fun connectedPrinter(context: Context): SamplePrinter =
+    escPosPrinter(context, yourPrinterConnection)
 ```
+
+The helper resolves bundled logo images and runs encoding/writes on the IO
+dispatcher. Keep the connection alive until the job completes and close it when
+your app no longer owns it. Set the optional `EscPosProfile` to match your hardware.
 
 For an SDK printer call `receipt.render(yourReceiptDriver)` and await the SDK's
 completion callback. The button passes the **same Receipt object** currently
