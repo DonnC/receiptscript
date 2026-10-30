@@ -19,7 +19,9 @@ class EscPosDriver(
     private val images: (String) -> MonochromeImage? = { null }
 ) : ReceiptAdapter<ByteArray> {
     override fun render(receipt: Receipt): ByteArray {
-        val job = Job()
+        val requestedColumns = receipt.meta?.width
+        require(requestedColumns == null || requestedColumns > 0) { "Receipt width must be positive" }
+        val job = Job(requestedColumns)
         job.command(27, 64)
         job.command(27, 116, profile.codeTable)
         receipt.blocks.forEach { job.block(it) }
@@ -30,18 +32,20 @@ class EscPosDriver(
 
     private data class Font(val selection: Int, val scale: Int, val columns: Int)
 
-    private fun font(style: ReceiptTextStyle): Font {
+    private fun font(style: ReceiptTextStyle, requestedColumns: Int?): Font {
         val small = style.font == null && style.size == RctFontSize.SMALL && profile.supportsFontB
         val scale = style.font?.let {
             require(it.isFinite() && it > 0) { "Font size must be positive" }
             (it / profile.fontAHeightDots).roundToInt().coerceIn(1, 8)
         } ?: if (style.size == RctFontSize.BIG) 2 else 1
         val glyph = if (small) profile.fontBWidthDots else profile.fontAWidthDots
-        return Font(if (small) 1 else 0, scale, (profile.printableWidthDots / (glyph * scale)).coerceAtLeast(1))
+        val physicalColumns = (profile.printableWidthDots / (glyph * scale)).coerceAtLeast(1)
+        return Font(if (small) 1 else 0, scale, minOf(physicalColumns, requestedColumns ?: physicalColumns))
     }
 
-    private inner class Job {
+    private inner class Job(private val requestedColumns: Int?) {
         val bytes = ByteArrayOutputStream()
+        private fun font(style: ReceiptTextStyle) = this@EscPosDriver.font(style, requestedColumns)
         fun command(vararg values: Int) { values.forEach(bytes::write) }
 
         private fun applyStyle(style: ReceiptTextStyle, alignment: RctAlign = RctAlign.LEFT): Font {
@@ -76,7 +80,7 @@ class EscPosDriver(
                     TextLayout.keyValue(block.key, block.value, font.columns).forEach(::line)
                 }
                 is ReceiptBlock.Table -> {
-                    // Header and body share geometry even if their styles use different native fonts.
+                    // Native table columns need the same glyph metrics in header and body.
                     require(block.headers.isEmpty() || font(block.headerStyle) == font(block.rowStyle)) {
                         "Native table headers and rows must use matching font metrics"
                     }

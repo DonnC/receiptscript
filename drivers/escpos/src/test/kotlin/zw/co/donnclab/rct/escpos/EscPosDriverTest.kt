@@ -9,6 +9,21 @@ import zw.co.donnclab.rct.*
 class EscPosDriverTest {
     private fun receipt(vararg blocks: ReceiptBlock) = Receipt("test", null, blocks.toList())
 
+    @Test fun `receipt metadata limits native text and table columns`() {
+        val input = ReceiptScript().compile("receipt \"narrow\"\nmeta:\n  width: 16\nleft \"12345678901234567890\"\ntable:\n  headers: \"A\" \"B\"\n  row \"Long product description\" \"12\"").render(null)
+        val bytes = EscPosDriver().render(input).toString(Charsets.US_ASCII)
+        assertTrue(bytes.contains("1234567890123456\n"))
+        assertTrue(bytes.contains("7890\n"))
+        val plain = PlainTextDriver(columns = 32).render(input).toString(Charsets.US_ASCII)
+        assertTrue(plain.lines().all { it.length <= 16 })
+    }
+
+    @Test fun `metadata never widens the physical printer`() {
+        val input = Receipt("wide", RctMeta(width = 80), listOf(ReceiptBlock.Text("X".repeat(40), RctAlign.LEFT, ReceiptTextStyle())))
+        assertTrue(EscPosDriver().render(input).toString(Charsets.US_ASCII).contains("X".repeat(32) + "\n"))
+        assertThrows(IllegalArgumentException::class.java) { EscPosDriver().render(input.copy(meta = RctMeta(width = 0))) }
+    }
+
     @Test fun `portable defaults initialize but never cut paper`() {
         val bytes = EscPosDriver().render(receipt(ReceiptBlock.Text("HELLO", RctAlign.CENTER, ReceiptTextStyle(bold = true, underline = true))))
         assertArrayEquals(byteArrayOf(27, 64), bytes.take(2).toByteArray())

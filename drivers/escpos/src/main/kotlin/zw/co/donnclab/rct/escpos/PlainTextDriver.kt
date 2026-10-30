@@ -15,6 +15,8 @@ class PlainTextDriver(
     }
 
     override fun render(receipt: Receipt): ByteArray {
+        val columns = minOf(this.columns, receipt.meta?.width ?: this.columns)
+        require(columns > 0) { "Receipt width must be positive" }
         val lines = receipt.blocks.flatMap { block -> when (block) {
             is ReceiptBlock.Text -> TextLayout.wrap(block.text, columns).map {
                 TextLayout.align(it, columns, when (block.align) {

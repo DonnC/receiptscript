@@ -1,6 +1,7 @@
 import { build } from "esbuild";
 import { copyFileSync, mkdirSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import "./prepare-package-readmes.mjs";
 const root = fileURLToPath(new URL("..", import.meta.url));
 process.chdir(root);
 mkdirSync("vscode-extension/dist", {recursive: true});

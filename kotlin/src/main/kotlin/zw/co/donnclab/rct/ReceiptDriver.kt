@@ -8,6 +8,11 @@ package zw.co.donnclab.rct
  * Byte-producing drivers implement ReceiptAdapter<ByteArray> instead.
  */
 interface ReceiptDriver : ReceiptAdapter<Unit> {
+    val supportsCut: Boolean get() = false
+
+    /** Explicit finishing operation; unsupported devices fail rather than silently ignoring it. */
+    fun cutPaper() { throw UnsupportedOperationException("This printer has no supported cutter") }
+
     fun printText(block: ReceiptBlock.Text)
     fun printKeyValue(block: ReceiptBlock.KeyValue)
     fun printDivider(block: ReceiptBlock.Divider)

@@ -6,6 +6,7 @@ import {delimiter, dirname, join, resolve} from "node:path";
 import {spawnSync} from "node:child_process";
 import {fileURLToPath} from "node:url";
 import yazl from "yazl";
+import {packagedReadme} from "./prepare-package-readmes.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 process.chdir(root);
@@ -144,11 +145,7 @@ run(["-cp", [consumer, coreJar, driverJar, stdlib, zxing].join(delimiter), "rece
 for (const name of ["LICENSE", "THIRD_PARTY_NOTICES.md"]) await copyFile(name, join(stage, name));
 await mkdir(join(stage, "licenses"), {recursive: true});
 await copyFile("docs/licenses/Apache-2.0.txt", join(stage, "licenses", "Apache-2.0.txt"));
-await copyFile("docs/downloads.md", join(stage, "README.md"));
-await mkdir(join(stage, "docs"), {recursive: true});
-for (const name of ["android.md", "adapters.md", "drivers.md", "language.md", "downloads.md"]) {
-  await copyFile(`docs/${name}`, join(stage, "docs", name));
-}
+await writeFile(join(stage, "README.md"), packagedReadme);
 await mkdir(join(stage, "examples"), {recursive: true});
 for (const file of await files("examples")) {
   const target = join(stage, file);

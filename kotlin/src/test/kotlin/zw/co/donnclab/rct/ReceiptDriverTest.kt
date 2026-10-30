@@ -25,5 +25,7 @@ class ReceiptDriverTest {
             ReceiptBlock.Barcode("x", 300, 60, BarcodeFormat.CODE128), ReceiptBlock.Spacer(2)))
         receipt.render(driver)
         assertEquals(listOf("text", "kv", "divider", "row", "table", "image", "qr", "barcode", "feed"), calls)
+        assertFalse(driver.supportsCut)
+        assertThrows(UnsupportedOperationException::class.java) { driver.cutPaper() }
     }
 }

@@ -18,3 +18,5 @@ Thumbs.db
 shared/
 vscode-extension/shared/
 kotlin/gradle-wrapper/
+packages/core/README.md
+vscode-extension/README.md

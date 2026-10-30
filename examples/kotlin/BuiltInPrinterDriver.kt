@@ -6,7 +6,7 @@ import zw.co.donnclab.rct.ReceiptTextStyle
 import zw.co.donnclab.rct.RctAlign
 
 /** Host contract: implement it with your SDK or connection library. */
-interface PrinterDriver {
+interface TerminalPrinter {
     fun text(value: String, alignment: RctAlign, style: ReceiptTextStyle)
     fun keyValue(key: String, value: String, style: ReceiptTextStyle)
     fun table(block: ReceiptBlock.Table)
@@ -16,10 +16,20 @@ interface PrinterDriver {
     fun qr(content: String, size: Int)
     fun barcode(block: ReceiptBlock.Barcode)
     fun feed(lines: Int)
+    val hasCutter: Boolean
+    fun cutPaper()
+
+    /** Await the SDK completion callback, throwing its paper/cover/thermal/device errors. */
+    suspend fun awaitCompletion()
 }
 
 /** Dispatches resolved blocks. The driver decides native commands or explicit fallbacks. */
-class ExampleAdapter(private val driver: PrinterDriver) : ReceiptDriver {
+class BuiltInPrinterDriver(private val driver: TerminalPrinter) : ReceiptDriver {
+    override val supportsCut: Boolean get() = driver.hasCutter
+    override fun cutPaper() {
+        check(supportsCut) { "This terminal has no cutter" }
+        driver.cutPaper()
+    }
     override fun printText(block: ReceiptBlock.Text) = driver.text(block.text, block.align, block.style)
     override fun printKeyValue(block: ReceiptBlock.KeyValue) = driver.keyValue(block.key, block.value, block.style)
     override fun printTable(block: ReceiptBlock.Table) = driver.table(block)
