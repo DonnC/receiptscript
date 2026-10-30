@@ -4,20 +4,12 @@
     "address": "12 Samora Machel Ave, Harare",
     "logo": "logo.png"
   },
-  "terminal": {
-    "tid": "T0000421",
-    "mid": "M0000719"
-  },
   "txn": {
-    "date": "2026-10-30T14:25:36",
     "reference": "RCT-001042",
-    "title": "SALE",
     "currency": "USD",
     "subtotal": "20.00",
     "tax": "3.00",
-    "total": "23.00",
-    "original": "27.00",
-    "savings": "4.00"
+    "total": "23.00"
   },
   "cashier": "Tariro M.",
   "payment": {
@@ -28,37 +20,17 @@
     {
       "name": "Maize meal 2kg",
       "qty": 1,
-      "original": "10.00",
       "total": "7.00"
     },
     {
       "name": "Cooking oil 2L",
       "qty": 1,
-      "original": "11.00",
       "total": "9.00"
     },
     {
       "name": "Bread x2",
       "qty": 2,
-      "original": "6.00",
       "total": "4.00"
     }
-  ],
-  "promotion": "You saved USD 4.00 today!",
-  "card": {
-    "pan": "4506123456787890",
-    "entry": "CHIP / EMV",
-    "stan": "001042",
-    "rrn": "630314001042",
-    "auth": "123456",
-    "result": "APPROVED"
-  },
-  "fiscal": {
-    "tin": "DEMO-000000",
-    "device": "DEMO-FD-042",
-    "counter": "000142",
-    "code": "DEMO-7B29-4C81",
-    "url": "https://example.com/verify/DEMO-000142"
-  },
-  "batch": "BTH-20261030-001"
+  ]
 }
