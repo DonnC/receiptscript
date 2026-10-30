@@ -1,0 +1,52 @@
+{
+  "logoRef": "asset:receipt_templates/logo.png",
+  "merchant": {
+    "merchantName": "Test Merchant 01"
+  },
+  "terminal": {
+    "tid": "TID-987654"
+  },
+  "device": {
+    "serialNumber": "SN-MF-2024-X1",
+    "model": "MP-800",
+    "osVersion": "11",
+    "vendor": "Morefun",
+    "serviceVersion": "1.2.0",
+    "hardwareVersion": "MP-800-V2",
+    "imei1": null,
+    "imei2": null,
+    "imsi1": null,
+    "imsi2": null,
+    "iccid1": null,
+    "iccid2": null
+  },
+  "report": {
+    "network": {
+      "activeInterface": "Wi-Fi",
+      "operatorName": "Marmalade Net",
+      "signalStrength": "WiFi | -65 dBm",
+      "tmsStatus": "SUCCESS",
+      "publicIp": "192.168.1.45"
+    },
+    "hardware": {
+      "batteryPercentage": 92,
+      "batteryStatus": "Charging",
+      "printerStatus": "Ready",
+      "storageAvailable": "12.45 GB",
+      "ramUsage": "45%",
+      "sdkVersion": "1.2.0",
+      "hardwareVersion": "MP-800-V2"
+    },
+    "security": {
+      "terminalId": "TID-987654",
+      "serialNumber": "SN-MF-2024-X1",
+      "appVersion": "v1.0.0-beta"
+    },
+    "operational": {
+      "pendingTransactions": 0,
+      "activeBatch": "B-20241121",
+      "lastSyncTime": "2024-11-21 14:30"
+    },
+    "lastUpdated": 1732194600000
+  }
+}

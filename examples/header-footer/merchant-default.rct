@@ -1,0 +1,6 @@
+image "{{brand.logo}}" 72 72
+center bold "{{merchant.name}}"
+center small "{{merchant.location}}"
+kv "TID:" "{{terminal.tid}}"
+kv "MID:" "{{merchant.mid}}"
+divider "_"

@@ -1,0 +1,60 @@
+{
+  "logoRef": "asset:receipt_templates/logo.png",
+  "merchant": {
+    "merchantName": "Test Merchant 01"
+  },
+  "terminal": {
+    "tid": "TESTMERC0001",
+    "serialNo": "SER001"
+  },
+  "report": {
+    "isZReport": false,
+    "shiftId": "102",
+    "cashierName": "Cashier One",
+    "cashierId": "CASHIER01",
+    "startTime": "2026-03-31T08:30:00",
+    "endTime": null,
+    "cashReconciliations": [
+      {
+        "currency": "USD",
+        "openingFloat": "100.00",
+        "totalCashSales": "250.00",
+        "totalCashInManual": "20.00",
+        "totalCashOutManual": "10.00",
+        "expectedInDrawer": "360.00",
+        "actualCounted": null
+      }
+    ],
+    "transactionSummaries": [
+      {
+        "currency": "USD",
+        "lines": [
+          {
+            "description": "Cash",
+            "count": "3",
+            "total": "180.00"
+          },
+          {
+            "description": "Card",
+            "count": "2",
+            "total": "150.00"
+          },
+          {
+            "description": "Mobile Wallet",
+            "count": "3",
+            "total": "200.00"
+          }
+        ],
+        "moneyIn": "530.00",
+        "moneyOut": "0.00",
+        "net": "530.00"
+      }
+    ],
+    "successfulCount": "8",
+    "failedCount": "1",
+    "reversedCount": "0",
+    "firstTransactionTime": "2026-03-31T08:41:00",
+    "lastTransactionTime": "2026-03-31T11:02:00",
+    "title": "X-REPORT / OPEN SHIFT"
+  }
+}

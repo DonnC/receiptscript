@@ -1,0 +1,82 @@
+{
+  "name": "rct-support",
+  "displayName": "ReceiptScript",
+  "description": "Syntax highlighting, linting, and preview support for ReceiptScript .rct templates",
+  "version": "0.3.0",
+  "publisher": "donnclab",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/DonnC/receiptscript.git",
+    "directory": "vscode-extension"
+  },
+  "license": "MIT",
+  "scripts": {
+    "vscode:prepublish": "node ../scripts/build-extension.mjs",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "files": [
+    "extension.js",
+    "dist/**",
+    "package.json",
+    "language-configuration.json",
+    "syntaxes/**",
+    "snippets/**",
+    "rct-language-spec.json",
+    "LICENSE.txt",
+    "README.md"
+  ],
+  "categories": [
+    "Programming Languages"
+  ],
+  "activationEvents": [
+    "onLanguage:rct",
+    "onCommand:rct.openPreview"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "rct.openPreview",
+        "title": "RCT: Open Preview"
+      }
+    ],
+    "languages": [
+      {
+        "id": "rct",
+        "aliases": [
+          "RCT",
+          "ReceiptScript"
+        ],
+        "extensions": [
+          ".rct"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "rct",
+        "scopeName": "source.rct",
+        "path": "./syntaxes/rct.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "rct",
+        "path": "./snippets/rct.code-snippets"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "rct.openPreview",
+          "when": "resourceExtname == .rct",
+          "group": "navigation"
+        }
+      ]
+    }
+  }
+}

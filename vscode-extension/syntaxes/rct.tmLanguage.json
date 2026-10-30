@@ -1,0 +1,50 @@
+{
+  "scopeName": "source.rct",
+  "name": "RCT",
+  "patterns": [
+    {
+      "name": "comment.line.number-sign.rct",
+      "match": "#.*$"
+    },
+    {
+      "name": "keyword.control.rct",
+      "match": "\\b(receipt|meta|width|paper|font|fontScaleMode|header|body|footer|use|text|left|center|right|bold|underline|small|big|kv|divider|spacer|if|for|in|table|row|headers|weights|alignments|qr|barcode|image)\\b"
+    },
+    {
+      "name": "string.interpolated.rct",
+      "begin": "{{",
+      "end": "}}",
+      "patterns": [
+        {
+          "name": "keyword.operator.filter.rct",
+          "match": "\\|"
+        }
+      ]
+    },
+    {
+      "name": "string.quoted.double.rct",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "include": "#interpolation"
+        }
+      ]
+    },
+    {
+      "name": "constant.numeric.rct",
+      "match": "\\b\\d+(?:\\.\\d+)?\\b"
+    }
+  ],
+  "repository": {
+    "interpolation": {
+      "patterns": [
+        {
+          "name": "string.interpolated.rct",
+          "begin": "{{",
+          "end": "}}"
+        }
+      ]
+    }
+  }
+}

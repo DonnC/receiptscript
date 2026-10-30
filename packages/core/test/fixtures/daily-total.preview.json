@@ -1,0 +1,54 @@
+{
+  "logoRef": "asset:receipt_templates/logo.png",
+  "merchant": {
+    "merchantName": "Test Merchant 01",
+    "location": "Harare"
+  },
+  "terminal": {
+    "tid": "TESTMERC0001",
+    "serialNo": "SER001"
+  },
+  "report": {
+    "selectedDate": "2025-10-27",
+    "generatedAt": "2025-10-27T17:30:00",
+    "totalCount": "42"
+  },
+  "extras": {
+    "currencyTotals": [
+      {
+        "currency": "USD",
+        "count": "30",
+        "moneyIn": "1,520.25",
+        "moneyOut": "35.00",
+        "net": "1,485.25"
+      },
+      {
+        "currency": "ZWG",
+        "count": "12",
+        "moneyIn": "800.25",
+        "moneyOut": "0.00",
+        "net": "800.25"
+      }
+    ],
+    "transactionBreakdowns": [
+      {
+        "transactionType": "Sale",
+        "count": "28",
+        "currency": "USD",
+        "totalValue": "1,520.25"
+      },
+      {
+        "transactionType": "Refund",
+        "count": "2",
+        "currency": "USD",
+        "totalValue": "-35.00"
+      },
+      {
+        "transactionType": "Sale",
+        "count": "12",
+        "currency": "ZWG",
+        "totalValue": "800.25"
+      }
+    ]
+  }
+}

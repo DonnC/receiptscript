@@ -1,0 +1,30 @@
+{
+  "logoRef": "asset:receipt_templates/logo.png",
+  "merchant": {
+    "merchantName": "Test Merchant 01",
+    "location": "123 Fake Street, Harare"
+  },
+  "terminal": {
+    "tid": "TESTMERC0001",
+    "serialNo": "SER001"
+  },
+  "report": {
+    "title": "SETTLEMENT CLEARANCE",
+    "subtitle": "Closed batch ready for purge",
+    "note": "Print this receipt before clearing the batch.",
+    "batchNumber": "BTH240120001",
+    "openedAt": "2024-01-20 08:00",
+    "settledAt": "2024-01-21 02:30",
+    "successfulTransactionCount": "242",
+    "totalAmount": "11,672.50",
+    "records": [
+      { "method": "Card", "currency": "USD", "amount": "50.00", "reference": "INV-123" },
+      { "method": "Mobile Wallet", "currency": "USD", "amount": "25.00", "reference": "INV-124" },
+      { "method": "Cash", "currency": "ZWL", "amount": "12,500.00", "reference": "INV-125" }
+    ],
+    "currencySummaries": [
+      { "currency": "USD", "successfulTransactions": "190", "totalAmount": "9,125.75" },
+      { "currency": "ZWL", "successfulTransactions": "52", "totalAmount": "2,546.75" }
+    ]
+  }
+}

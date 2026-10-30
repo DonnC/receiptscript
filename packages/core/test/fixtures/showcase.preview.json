@@ -1,0 +1,84 @@
+{
+  "brand": {
+    "name": "ReceiptScript Demo Store",
+    "tagline": "Fast receipts, portable templates",
+    "city": "Harare, Zimbabwe",
+    "logo": "assets/receiptscript-badge.png"
+  },
+  "txn": {
+    "title": "SALE RECEIPT",
+    "date": "2026-03-31 14:30",
+    "invoiceId": "INV-000123",
+    "currency": "USD",
+    "subtotal": 23.5,
+    "tax": 1.75,
+    "total": 25.25,
+    "copyLabel": "Customer Copy"
+  },
+  "cashier": {
+    "name": "Tafadzwa Moyo"
+  },
+  "terminal": {
+    "tid": "TID-900123"
+  },
+  "items": [
+    {
+      "name": "Cold Brew",
+      "qty": 1,
+      "total": 4.5
+    },
+    {
+      "name": "Breakfast Wrap",
+      "qty": 2,
+      "total": 12.0
+    },
+    {
+      "name": "ReceiptScript Mug",
+      "qty": 1,
+      "total": 8.75
+    }
+  ],
+  "loyalty": {
+    "memberId": "LOY-7788123",
+    "pointsEarned": 25
+  },
+  "payment": {
+    "method": "Mobile Wallet",
+    "reference": "PMT-883901",
+    "wallet": "EcoCash",
+    "phone": "0778 060 236",
+    "cardPan": "4506911234567890"
+  },
+  "customer": {
+    "nationalId": "63-123456A75"
+  },
+  "links": {
+    "payment": "https://receiptscript.dev/pay/INV-000123",
+    "supportLabel": "support.receiptscript.dev",
+    "supportUrl": "https://receiptscript.dev/help"
+  },
+  "samples": {
+    "transactions": [
+      { "type": "Card Sale", "currency": "USD", "amount": 12.5, "status": "APPROVED" },
+      { "type": "Mobile Wallet Sale", "currency": "USD", "amount": 18.0, "status": "APPROVED" },
+      { "type": "Cash Sale", "currency": "ZWL", "amount": 120.0, "status": "SUCCESS" },
+      { "type": "Card Refund", "currency": "USD", "amount": 5.75, "status": "REFUNDED" },
+      { "type": "Wallet Refund", "currency": "ZWL", "amount": 9.0, "status": "REFUNDED" },
+      { "type": "Card Reversal", "currency": "USD", "amount": 25.0, "status": "REVERSED" },
+      { "type": "Cash In", "currency": "ZWL", "amount": 300.0, "status": "POSTED" },
+      { "type": "Cash Out", "currency": "ZWL", "amount": 45.0, "status": "POSTED" },
+      { "type": "Fuel Sale", "currency": "USD", "amount": 62.35, "status": "APPROVED" },
+      { "type": "Airtime Sale", "currency": "USD", "amount": 3.0, "status": "APPROVED" },
+      { "type": "Utility Payment", "currency": "ZWL", "amount": 15.25, "status": "APPROVED" },
+      { "type": "Fee Charge", "currency": "USD", "amount": 1.0, "status": "POSTED" },
+      { "type": "Chargeback", "currency": "USD", "amount": 49.99, "status": "DISPUTED" },
+      { "type": "Purchase", "currency": "USD", "amount": 8.25, "status": "APPROVED" },
+      { "type": "Purchase", "currency": "ZWL", "amount": 32.0, "status": "APPROVED" },
+      { "type": "Balance Inquiry", "currency": "USD", "amount": 0.0, "status": "OK" },
+      { "type": "Top Up", "currency": "ZWL", "amount": 10.0, "status": "APPROVED" },
+      { "type": "Void", "currency": "USD", "amount": 14.5, "status": "VOIDED" },
+      { "type": "Settlement", "currency": "USD", "amount": 1175.25, "status": "COMPLETED" },
+      { "type": "PIN Retry", "currency": "ZWL", "amount": 22.0, "status": "DECLINED" }
+    ]
+  }
+}

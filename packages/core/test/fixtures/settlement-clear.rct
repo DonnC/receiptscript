@@ -1,0 +1,49 @@
+receipt "settlement_clear"
+
+meta:
+  width: 34
+  paper: "40mm"
+  copy: "merchant"
+  templateVersion: 3
+
+spacer 2
+if logoRef:
+  image "{{logoRef}}" 300 300
+  spacer 1
+
+center bold "{{report.title}}"
+center "{{report.subtitle}}"
+divider "_"
+center bold "{{merchant.merchantName}}"
+center "{{merchant.location}}"
+kv "TID" "{{terminal.tid}}"
+kv "DEVICE" "{{terminal.serialNo}}"
+kv "BATCH" "{{report.batchNumber}}"
+kv "OPENED" "{{report.openedAt}}"
+kv "SETTLED" "{{report.settledAt}}"
+spacer 1
+divider "_"
+spacer 1
+
+kv "SUCCESS TXNS" "{{report.successfulTransactionCount}}"
+kv "TOTAL AMOUNT" "{{report.totalAmount}}"
+
+divider "_"
+spacer 2
+
+table:
+  headers: "METHOD" "CUR" "AMOUNT" "REF"
+  for record in report.records:
+    row "{{record.method}}" "{{record.currency}}" "{{record.amount}}" "{{record.reference}}"
+
+divider "_"
+spacer 1
+table:
+  headers: "CURRENCY" "TXNS" "TOTAL"
+  alignments: start center end
+  for currencySummary in report.currencySummaries:
+    row "{{currencySummary.currency}}" "{{currencySummary.successfulTransactions}}" "{{currencySummary.totalAmount}}"
+
+spacer 1
+center "{{report.note}}"
+spacer 2

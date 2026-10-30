@@ -1,0 +1,83 @@
+receipt "shift_report"
+
+meta:
+  width: 34
+  paper: "40mm"
+  copy: "merchant"
+  templateVersion: 3
+
+spacer 2
+if logoRef:
+  image "{{logoRef}}" 300 300
+  spacer 1
+
+center big bold "*** {{report.title}} ***"
+center bold "{{merchant.merchantName}}"
+center small "TID: {{terminal.tid}}"
+center small "Shift ID: {{report.shiftId}}"
+spacer 1
+
+divider
+center big bold "SHIFT DETAILS"
+divider
+kv "CASHIER" "{{report.cashierName}}"
+kv "DEVICE ID" "{{terminal.serialNo}}"
+kv "START" "{{report.startTime}}"
+if report.endTime:
+  kv "END" "{{report.endTime}}"
+kv "SUCCESSFUL" "{{report.successfulCount}}"
+kv "DECLINED / FAILED" "{{report.failedCount}}"
+kv "VOIDED / REVERSED" "{{report.reversedCount}}"
+if report.firstTransactionTime:
+  kv "FIRST SALE" "{{report.firstTransactionTime}}"
+if report.lastTransactionTime:
+  kv "LAST SALE" "{{report.lastTransactionTime}}"
+spacer 1
+
+for recon in report.cashReconciliations:
+  divider
+  center big bold "{{recon.currency}} RECON"
+  divider "-" 33
+  kv "OPENING FLOAT" "{{recon.openingFloat}}"
+  kv "CASH SALES" "{{recon.totalCashSales}}"
+  kv "MANUAL CASH IN" "{{recon.totalCashInManual}}"
+  kv "MANUAL CASH OUT" "{{recon.totalCashOutManual}}"
+  divider "-" 33
+  kv "EXPECTED IN DRAWER" "{{recon.expectedInDrawer}}"
+  if recon.actualCounted:
+    kv "ACTUAL COUNTED" "{{recon.actualCounted}}"
+  spacer 1
+
+divider
+center big bold "TXN SUMMARY"
+divider
+for summary in report.transactionSummaries:
+  center bold "CURRENCY: {{summary.currency}}"
+  table:
+    headers: "TYPE" "SALES" "TOTAL"
+    weights: 0.45 0.15 0.40
+    alignments: start center end
+    for line in summary.lines:
+      row "{{line.description}}" "{{line.count}}" "{{line.total}}"
+  kv "MONEY IN" "{{summary.moneyIn}}"
+  kv "MONEY OUT" "{{summary.moneyOut}}"
+  kv "NET" "{{summary.net}}"
+  spacer 1
+
+divider
+center big bold "SIGNATURES"
+divider
+spacer 1
+center "........................................"
+center "CASHIER ({{report.cashierName}})"
+spacer 1
+center "........................................"
+center "MANAGER / SUPERVISOR"
+spacer 3
+
+if report.isZReport:
+  divider
+  center big bold "*** SHIFT CLOSED ***"
+  spacer 1
+
+spacer 2

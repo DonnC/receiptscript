@@ -1,0 +1,40 @@
+{
+  "logoRef": "asset:receipt_templates/logo.png",
+  "merchant": {
+    "merchantName": "Test Merchant 01",
+    "location": "123 Fake Street, Harare"
+  },
+  "terminal": {
+    "tid": "TESTMERC0001",
+    "serialNo": "SER001"
+  },
+  "report": {
+    "title": "SETTLEMENT SUMMARY",
+    "subtitle": "Batch summary ready for review",
+    "note": "Print this summary before clearing the batch.",
+    "batchNumber": "BTH240120001",
+    "openedAt": "2024-01-20 08:00",
+    "settledAt": "2024-01-21 02:30",
+    "successfulTransactionCount": "242",
+    "totalAmount": "11,672.50",
+    "currencySummaries": [
+      {
+        "currency": "USD",
+        "successfulTransactions": "190",
+        "totalAmount": "9,125.75",
+        "methodSummaries": [
+          { "paymentMethod": "Card", "successfulTransactions": "190", "totalAmount": "9,125.75" }
+        ]
+      },
+      {
+        "currency": "ZWL",
+        "successfulTransactions": "52",
+        "totalAmount": "2,546.75",
+        "methodSummaries": [
+          { "paymentMethod": "Mobile Wallet", "successfulTransactions": "38", "totalAmount": "1,890.50" },
+          { "paymentMethod": "Cash", "successfulTransactions": "14", "totalAmount": "656.25" }
+        ]
+      }
+    ]
+  }
+}

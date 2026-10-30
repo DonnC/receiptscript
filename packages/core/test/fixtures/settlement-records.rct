@@ -1,0 +1,44 @@
+receipt "settlement_records"
+
+meta:
+  width: 34
+  paper: "40mm"
+  copy: "merchant"
+  templateVersion: 4
+
+spacer 2
+if logoRef:
+  image "{{logoRef}}" 300 300
+  spacer 1
+
+center bold "{{report.title}}"
+center "{{report.subtitle}}"
+divider "_"
+
+center bold "{{merchant.merchantName}}"
+center "{{merchant.location}}"
+kv "TID" "{{terminal.tid}}"
+kv "DEVICE" "{{terminal.serialNo}}"
+kv "BATCH" "{{report.batchNumber}}"
+kv "OPENED" "{{report.openedAt}}"
+kv "SETTLED" "{{report.settledAt}}"
+divider
+
+kv "RECORDS" "{{report.successfulTransactionCount}}"
+divider "-"
+spacer 1
+
+for currencyGroup in report.currencyGroups:
+  center bold "CURRENCY: {{currencyGroup.currency}}, {{currencyGroup.recordCount}}"
+  spacer 1
+  table:
+    headers: "STATUS" "METHOD" "AMT" "REF"
+    weights: 0.23 0.20 0.15 0.35
+    alignments: start start start start start
+    for record in currencyGroup.records:
+      row "{{record.status}}" "{{record.method}}" "{{record.amount}}" "{{record.reference}}"
+  spacer 1
+
+spacer 1
+center "{{report.note}}"
+spacer 2

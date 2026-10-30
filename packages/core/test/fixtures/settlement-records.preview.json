@@ -1,0 +1,61 @@
+{
+  "logoRef": "asset:receipt_templates/logo.png",
+  "merchant": {
+    "merchantName": "Test Merchant 01",
+    "location": "123 Fake Street, Harare"
+  },
+  "terminal": {
+    "tid": "TESTMERC0001",
+    "serialNo": "SER001"
+  },
+  "report": {
+    "title": "SETTLEMENT RECORDS",
+    "subtitle": "Detailed settlement record listing",
+    "note": "Print all settlement records before clearing the batch.",
+    "batchNumber": "BTH240120001",
+    "openedAt": "2024-01-20 08:00",
+    "settledAt": "2024-01-21 02:30",
+    "successfulTransactionCount": "242",
+    "currencyGroups": [
+      {
+        "currency": "USD",
+        "recordCount": "2",
+        "records": [
+          {
+            "time": "08:30",
+            "status": "Approved",
+            "method": "Card",
+            "currency": "USD",
+            "amount": "50.00",
+            "reference": "INV-000123",
+            "synced": "YES"
+          },
+          {
+            "time": "09:10",
+            "status": "Approved",
+            "method": "Card",
+            "currency": "USD",
+            "amount": "75.00",
+            "reference": "INV-000124",
+            "synced": "YES"
+          }
+        ]
+      },
+      {
+        "currency": "ZWL",
+        "recordCount": "1",
+        "records": [
+          {
+            "time": "10:25",
+            "status": "Failed",
+            "method": "Cash",
+            "currency": "ZWL",
+            "amount": "25.00",
+            "reference": "INV-000125",
+            "synced": "NO"
+          }
+        ]
+      }
+    ]
+  }
+}

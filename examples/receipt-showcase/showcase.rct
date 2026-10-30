@@ -1,0 +1,68 @@
+receipt "receipt_showcase"
+
+meta:
+  width: 34
+  paper: "58mm"
+  font: 12
+  fontScaleMode: "relative"
+  copy: "Demo"
+  templateVersion: 1
+
+# Base receipt header
+image "{{brand.logo}}" 88 88
+center bold "{{brand.name}}" 18
+center small "{{brand.tagline}}"
+center "{{brand.city}}"
+divider "="
+
+center bold underline "{{txn.title}}" 18
+left "{{txn.date | datetime}}"
+kv "INVOICE" "{{txn.invoiceId}}"
+kv "OPERATOR" "{{cashier.name}}"
+kv "DEVICE" "{{terminal.tid}}"
+divider "---"
+
+table:
+  headers: "ITEM" "QTY" "TOTAL"
+  weights: 3 1 2
+  alignments: start center end
+  for item in items:
+    row "{{item.name}}" "{{item.qty}}" "{{item.total | money:txn.currency}}"
+divider "-" 14
+kv "SUBTOTAL" "{{txn.subtotal | money:txn.currency}}"
+kv "TAX" "{{txn.tax | money:txn.currency}}"
+kv big bold "TOTAL" "{{txn.total | money:txn.currency}}"
+
+if loyalty.memberId:
+  divider
+  kv "LOYALTY" "{{loyalty.memberId}}"
+  kv "POINTS" "{{loyalty.pointsEarned}}"
+
+spacer 1
+center bold "PAYMENT"
+kv "METHOD" "{{payment.method}}"
+kv "REFERENCE" "{{payment.reference}}"
+if payment.wallet:
+  kv "WALLET" "{{payment.wallet}}"
+if payment.phone:
+  kv "PHONE" "{{payment.phone | mask:4,3}}"
+if payment.cardPan:
+  kv "CARD" "{{payment.cardPan | maskPan}}"
+if customer.nationalId:
+  kv "NATIONAL ID" "{{customer.nationalId | mask:2,3}}"
+divider "="
+
+center underline "SCAN TO PAY AGAIN"
+qr "{{links.payment}}" 230
+barcode "{{txn.invoiceId}}" 300 60 "code128"
+spacer 1
+center "Need help? {{links.supportLabel}}"
+center "{{links.supportUrl}}"
+
+# Mixed transaction sampler for previews, demos, and videos.
+divider "="
+center bold "TRANSACTION SAMPLER"
+table:
+  headers: "TYPE" "CUR" "AMT" "STATUS"
+  for sample in samples.transactions:
+    row "{{sample.type}}" "{{sample.currency}}" "{{sample.amount | money:sample.currency}}" "{{sample.status}}"

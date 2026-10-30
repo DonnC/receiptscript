@@ -1,0 +1,19 @@
+# Third-party notices
+
+ReceiptScript source is MIT licensed. Dependencies and tooling retain their own
+licenses; do not remove required notices from redistributed artifacts.
+
+| Component | Purpose | License / source |
+| --- | --- | --- |
+| BWIP-JS | Optional HTML QR/barcode encoding and VS Code preview | MIT; includes BWIPP and font notices, see installed package license files and https://github.com/metafloor/bwip-js |
+| Kotlin standard library | Kotlin runtime | Apache-2.0, https://github.com/JetBrains/kotlin |
+| ZXing core | Optional Kotlin ESC/POS QR/barcode encoding | Apache-2.0, https://github.com/zxing/zxing |
+| Gradle wrapper | Reproducible JVM build | Apache-2.0, https://github.com/gradle/gradle |
+| JUnit | JVM tests | EPL-1.0, https://junit.org/junit4/ |
+| esbuild | Extension bundling, development only | MIT, https://github.com/evanw/esbuild |
+| Playwright core | Reproducible README screenshots, development only | Apache-2.0, https://github.com/microsoft/playwright |
+| yazl | Binary release ZIP/JAR assembly, development only | MIT, https://github.com/thejoshwolfe/yazl |
+
+The lockfile records transitive JavaScript dependencies. Distribution builds copy
+the barcode encoder's license files alongside its bundle. Inspect notices whenever
+upgrading or changing the bundled renderer.

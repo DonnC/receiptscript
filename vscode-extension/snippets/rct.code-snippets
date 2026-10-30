@@ -1,0 +1,41 @@
+{
+  "Receipt Declaration": {
+    "prefix": "receipt",
+    "body": [
+      "receipt \"$1\""
+    ],
+    "description": "Declares the receipt template name."
+  },
+  "Metadata Block": {
+    "prefix": "meta",
+    "body": [
+      "meta:",
+      "  width: ${1:42}",
+      "  paper: \"$2\""
+    ],
+    "description": "Defines template metadata."
+  },
+  "Key Value Row": {
+    "prefix": "kv",
+    "body": [
+      "kv \"$1\" \"$2\" ${3:11.0}"
+    ],
+    "description": "Prints a key/value row."
+  },
+  "Conditional Block": {
+    "prefix": "if",
+    "body": [
+      "if ${1:txn.wallet}:",
+      "  ${2:center \"{{txn.wallet}}\"}"
+    ],
+    "description": "Conditionally renders a nested block."
+  },
+  "Loop Block": {
+    "prefix": "for",
+    "body": [
+      "for ${1:item} in ${2:items}:",
+      "  ${3:kv \"{{@index}}\" \"{{item}}\"}"
+    ],
+    "description": "Iterates over a collection path."
+  }
+}

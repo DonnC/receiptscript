@@ -1,0 +1,59 @@
+receipt "diagnostics"
+
+meta:
+  width: 34
+  paper: "40mm"
+  copy: "merchant"
+  templateVersion: 3
+
+spacer 2
+if logoRef:
+  image "{{logoRef}}" 300 300
+  spacer 1
+
+center big bold "*** DIAGNOSTICS ***"
+center bold "{{merchant.merchantName}}"
+center small "TID: {{terminal.tid}}"
+if device:
+  center small "{{device.vendor}} {{device.model}} / SN {{device.serialNumber}}"
+spacer 1
+
+divider
+center big bold "NETWORK"
+divider
+kv "INTERFACE" "{{report.network.activeInterface}}"
+kv "OPERATOR" "{{report.network.operatorName}}"
+kv "SIGNAL" "{{report.network.signalStrength}}"
+kv "TMS" "{{report.network.tmsStatus}}"
+kv "PUBLIC IP" "{{report.network.publicIp}}"
+spacer 1
+
+divider
+center big bold "HARDWARE"
+divider
+kv "BATTERY" "{{report.hardware.batteryPercentage}}% ({{report.hardware.batteryStatus}})"
+kv "PRINTER" "{{report.hardware.printerStatus}}"
+kv "STORAGE" "{{report.hardware.storageAvailable}}"
+kv "RAM USAGE" "{{report.hardware.ramUsage}}"
+kv "SDK VERSION" "{{report.hardware.sdkVersion}}"
+kv "HARDWARE VERSION" "{{report.hardware.hardwareVersion}}"
+spacer 1
+
+divider
+center big bold "SECURITY"
+divider
+kv "TERMINAL ID" "{{report.security.terminalId}}"
+kv "SERIAL NUMBER" "{{report.security.serialNumber}}"
+kv "APP VERSION" "{{report.security.appVersion}}"
+spacer 1
+
+divider
+center big bold "OPERATIONAL"
+divider
+kv "PENDING TXNS" "{{report.operational.pendingTransactions}}"
+kv "ACTIVE BATCH" "{{report.operational.activeBatch}}"
+kv "LAST SYNC" "{{report.operational.lastSyncTime}}"
+spacer 1
+
+center small "Generated: {{report.lastUpdated | datetime}}"
+spacer 2

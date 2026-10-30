@@ -1,0 +1,21 @@
+receipt "sale"
+
+meta:
+  width: 32
+
+center bold "{{merchant.name}}"
+divider "-"
+kv "INVOICE" "{{sale.reference}}"
+kv "DATE" "{{sale.date | datetime}}"
+table:
+  headers: "ITEM" "QTY" "TOTAL"
+  weights: 3 1 2
+  alignments: start center end
+  for item in items:
+    row "{{item.name}}" "{{item.quantity}}" "{{item.total | money:sale.currency}}"
+divider "-"
+kv bold "TOTAL" "{{sale.total | money:sale.currency}}"
+barcode "{{sale.reference}}" 300 60 "code128"
+qr "https://example.com/receipts/{{sale.reference}}" 180
+footer:
+  center "Thank you!"

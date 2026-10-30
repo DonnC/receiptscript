@@ -1,0 +1,40 @@
+receipt "manual_header_footer_demo"
+
+meta:
+  width: 34
+  paper: "58mm"
+  copy: "customer"
+  templateVersion: 1
+
+header:
+  image "{{brand.logo}}" 72 72
+  center bold "{{merchant.name}}"
+  center small "{{merchant.location}}"
+  kv "TID:" "{{terminal.tid}}"
+  kv "MID:" "{{merchant.mid}}"
+  divider "_"
+
+body:
+  kv "DATE:" "{{txn.date | datetime}}"
+  kv "INVOICE:" "{{txn.invoiceId}}"
+  if card.stan:
+    kv "STAN:" "{{card.stan}}"
+  if card.rrn:
+    kv "RRN:" "{{card.rrn}}"
+  if card.authCode:
+    kv "AUTH CODE:" "{{card.authCode}}"
+  if card.pan:
+    kv "CARD:" "{{card.pan | maskPan}}"
+  if card.entryLabel:
+    kv "ENTRY:" "{{card.entryLabel}}"
+  divider "_"
+  center bold "{{txn.title}}"
+  center bold "{{txn.amount | money:txn.currency}}"
+  center "{{txn.message | upper}}"
+
+footer:
+  divider "_"
+  if links.supportUrl:
+    center small "Support: {{links.supportLabel}}"
+  center "{{txn.copyLabel | upper}}"
+  center "Thank you!"

@@ -1,0 +1,16 @@
+receipt "sale"
+
+center bold "{{merchant}}"
+kv "REFERENCE" "{{reference}}"
+divider
+table:
+  headers: "ITEM" "QTY" "TOTAL"
+  weights: 3 1 2
+  alignments: start center end
+  for item in items:
+    row "{{item.name}}" "{{item.quantity}}" "{{item.total | money:currency}}"
+divider
+kv bold "TOTAL" "{{total | money:currency}}"
+barcode "{{reference}}" 300 60 "code128"
+footer:
+  center small "github.com/DonnC/receiptscript"

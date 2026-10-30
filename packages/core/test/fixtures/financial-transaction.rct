@@ -1,0 +1,116 @@
+receipt "financial-transaction"
+
+meta:
+  width: 34
+  copy: "customer"
+  templateVersion: 3
+
+if logoRef:
+  image "{{logoRef}}" 300 300
+  spacer 1
+
+center bold "{{merchant.merchantName}}"
+center small "{{merchant.location}}"
+spacer 1
+kv "TID:" "{{terminal.tid}}"
+kv "MID:" "{{merchant.mid}}"
+divider "_"
+
+kv "DATE:" "{{display.date | datetime}}"
+kv "INVOICE_No:" "{{result.invoiceNo}}"
+
+if result.bankHostData.stan:
+  kv "STAN:" "{{result.bankHostData.stan}}"
+
+if result.bankHostData.rrn:
+  kv "RRN:" "{{result.bankHostData.rrn}}"
+
+if result.bankHostData.authCode:
+  kv "AUTH CODE:" "{{result.bankHostData.authCode}}"
+
+if request.originalTransaction.originalStan:
+  kv "ORIG STAN:" "{{request.originalTransaction.originalStan}}"
+
+if request.originalTransaction.originalRrn:
+  kv "ORIG RRN:" "{{request.originalTransaction.originalRrn}}"
+
+if request.originalTransaction.originalDateTime:
+  kv "ORIG DATE:" "{{request.originalTransaction.originalDateTime}}"
+
+if request.fundingSource.maskedPan:
+  kv "CARD:" "{{request.fundingSource.maskedPan}}"
+
+if extras.entry_mode_label:
+  kv "ENTRY:" "{{extras.entry_mode_label}}"
+
+if extras.AID:
+  kv "AID:" "{{extras.AID}}"
+
+if extras.APP_LABEL:
+  kv "APP:" "{{extras.APP_LABEL}}"
+
+if extras.SIGNATURE_REQUIRED:
+  kv "CVM:" "{{extras.SIGNATURE_REQUIRED}}"
+
+if request.fundingSource.mobileNumber:
+  kv "PHONE:" "{{request.fundingSource.mobileNumber | mask:4,2}}"
+
+if request.fundingSource.walletProvider:
+  kv "WALLET:" "{{request.fundingSource.walletProvider}}"
+
+if request.fundingSource.accountNumber:
+  kv "ACCOUNT:" "{{request.fundingSource.accountNumber | mask:2,2}}"
+
+if extras.bank_name:
+  kv "BANK:" "{{extras.bank_name}}"
+
+if request.fundingSource.basketReference:
+  kv "SCANIT REF:" "{{request.fundingSource.basketReference}}"
+
+if result.bankHostData.customerReference:
+  kv "CUSTOMER REF:" "{{result.bankHostData.customerReference | mask:4,2}}"
+
+if extras.customer_name:
+  kv "BENEFICIARY:" "{{extras.customer_name}}"
+
+if extras.beneficiary_bank:
+  kv "BANK:" "{{extras.beneficiary_bank}}"
+
+if request.cashback:
+  kv "CASHBACK:" "{{display.cashbackAmount}}"
+
+if extras.vehicle_class:
+  kv "CLASS:" "{{extras.vehicle_class}}"
+
+if extras.payment_method:
+  kv "METHOD:" "{{extras.payment_method}}"
+
+if extras.item_count:
+  kv "ITEMS:" "{{extras.item_count}}"
+
+if extras.discount_label:
+  kv "DISCOUNT:" "{{extras.discount_label}}"
+
+if extras.cart_note:
+  kv "NOTE:" "{{extras.cart_note}}"
+
+divider "_"
+
+center bold "{{display.title}}"
+center bold "{{display.amount | money:display.currency}}"
+divider "_"
+spacer 1
+
+if display.amountTendered:
+  kv "TENDERED:" "{{display.amountTendered}}"
+
+if display.changeDue:
+  kv "CHANGE:" "{{display.changeDue}}"
+
+if display.receiptDataLine:
+  center small "{{display.receiptDataLine}}"
+  spacer 1
+
+center "{{display.copyLabel | upper}}"
+center "Thank you!"
+spacer 3

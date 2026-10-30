@@ -1,0 +1,5 @@
+divider "_"
+if links.supportUrl:
+  center small "Support: {{links.supportLabel}}"
+center "{{txn.copyLabel | upper}}"
+center "Thank you!"

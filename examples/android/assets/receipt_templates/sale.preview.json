@@ -1,0 +1,8 @@
+{
+  "merchant": {"name": "Example Store"},
+  "sale": {"reference": "INV-001", "date": "2026-10-30T10:15:00", "currency": "USD", "total": "25.25"},
+  "items": [
+    {"name": "Coffee", "quantity": 1, "total": "4.50"},
+    {"name": "Lunch", "quantity": 1, "total": "20.75"}
+  ]
+}

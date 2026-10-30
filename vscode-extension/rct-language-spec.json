@@ -1,0 +1,194 @@
+{
+  "statements": [
+    {
+      "name": "receipt",
+      "kind": "root",
+      "description": "Declares the receipt template name.",
+      "snippet": "receipt \"$1\""
+    },
+    {
+      "name": "meta",
+      "kind": "block",
+      "description": "Defines template metadata such as width, paper profile, base font, and font scale mode.",
+      "snippet": "meta:\n  width: ${1:34}\n  paper: \"${2:58mm}\"\n  font: ${3:21}\n  fontScaleMode: \"${4|relative,fixed|}\""
+    },
+    {
+      "name": "header",
+      "kind": "block",
+      "description": "Defines a first-class receipt header section.",
+      "snippet": "header:\n  center bold \"{{merchant.name}}\""
+    },
+    {
+      "name": "body",
+      "kind": "block",
+      "description": "Defines the main receipt body section.",
+      "snippet": "body:\n  kv \"${1:INVOICE}\" \"${2:{{txn.invoiceId}}}\""
+    },
+    {
+      "name": "footer",
+      "kind": "block",
+      "description": "Defines a first-class receipt footer section.",
+      "snippet": "footer:\n  center \"Thank you!\""
+    },
+    {
+      "name": "use",
+      "kind": "statement",
+      "description": "Injects a reusable header or footer fragment resolved by the host app.",
+      "snippet": "use ${1|header,footer|} \"$2\""
+    },
+    {
+      "name": "left",
+      "kind": "statement",
+      "description": "Prints left-aligned text.",
+      "snippet": "left \"$1\" ${2:12.5}"
+    },
+    {
+      "name": "center",
+      "kind": "statement",
+      "description": "Prints centered text.",
+      "snippet": "center \"$1\" ${2:12.5}"
+    },
+    {
+      "name": "right",
+      "kind": "statement",
+      "description": "Prints right-aligned text.",
+      "snippet": "right \"$1\" ${2:12.5}"
+    },
+    {
+      "name": "text",
+      "kind": "statement",
+      "description": "Prints text using the default left alignment.",
+      "snippet": "text \"$1\" ${2:12.5}"
+    },
+    {
+      "name": "kv",
+      "kind": "statement",
+      "description": "Prints a key/value row.",
+      "snippet": "kv \"$1\" \"$2\" ${3:11.0}"
+    },
+    {
+      "name": "divider",
+      "kind": "statement",
+      "description": "Prints a divider line. Use an optional pattern and optional length.",
+      "snippet": "divider \"${1:=}\" ${2:42}"
+    },
+    {
+      "name": "row",
+      "kind": "statement",
+      "description": "Prints a table-like row using evenly spaced columns.",
+      "snippet": "row \"$1\" \"$2\" \"$3\""
+    },
+    {
+      "name": "table",
+      "kind": "block",
+      "description": "Declares a first-class table block that contains rows, loops, and conditions.",
+      "snippet": "table:\n  row \"${1:ITEM}\" \"${2:QTY}\" \"${3:TOTAL}\"\n  for item in ${4:items}:\n    row \"{{item.name}}\" \"{{item.qty}}\" \"{{item.total}}\""
+    },
+    {
+      "name": "qr",
+      "kind": "statement",
+      "description": "Prints a QR code block with optional size.",
+      "snippet": "qr \"${1:{{txn.qr}}}\" ${2:240}"
+    },
+    {
+      "name": "barcode",
+      "kind": "statement",
+      "description": "Prints a barcode. Formats: code128 (default), code39, ean13, ean8, upca and itf. Width and height are adapter units.",
+      "snippet": "barcode \"${1:{{txn.reference}}}\" ${2:300} ${3:60} \"${4|code128,code39,ean13,ean8,upca,itf|}\""
+    },
+    {
+      "name": "image",
+      "kind": "statement",
+      "description": "Prints an image/logo block with an optional width and height.",
+      "snippet": "image \"${1:assets/logo.png}\" ${2:88} ${3:88}"
+    },
+    {
+      "name": "spacer",
+      "kind": "statement",
+      "description": "Adds one or more blank lines.",
+      "snippet": "spacer ${1:1}"
+    },
+    {
+      "name": "if",
+      "kind": "block",
+      "description": "Conditionally renders a nested block when a path is truthy.",
+      "snippet": "if ${1:txn.wallet}:\n  ${2:center \"{{txn.wallet}}\"}"
+    },
+    {
+      "name": "for",
+      "kind": "block",
+      "description": "Iterates over a collection path and renders a nested block.",
+      "snippet": "for ${1:item} in ${2:items}:\n  ${3:kv \"{{@index}}\" \"{{item}}\"}"
+    },
+    {
+      "name": "bold",
+      "kind": "modifier",
+      "description": "Applies bold styling to a text or key/value statement.",
+      "snippet": "center bold \"$1\""
+    },
+    {
+      "name": "underline",
+      "kind": "modifier",
+      "description": "Applies underline styling to a text or key/value statement when the renderer supports it.",
+      "snippet": "center underline \"$1\""
+    },
+    {
+      "name": "small",
+      "kind": "modifier",
+      "description": "Uses the small receipt font on a text statement.",
+      "snippet": "center small \"$1\" ${2:12.5}"
+    },
+    {
+      "name": "big",
+      "kind": "modifier",
+      "description": "Uses the large receipt font on a text statement.",
+      "snippet": "center big bold \"$1\" ${2:14.0}"
+    }
+  ],
+  "filters": [
+    {
+      "name": "upper",
+      "description": "Converts a rendered value to uppercase."
+    },
+    {
+      "name": "lower",
+      "description": "Converts a rendered value to lowercase."
+    },
+    {
+      "name": "default",
+      "description": "Uses a fallback value when the binding is empty."
+    },
+    {
+      "name": "money",
+      "description": "Formats the value as money using the provided currency path or code."
+    },
+    {
+      "name": "date",
+      "description": "Formats the value as a date. Defaults to dd/MM/yyyy. Optional args: output pattern, input pattern."
+    },
+    {
+      "name": "datetime",
+      "description": "Formats the value as a date and time. Defaults to dd/MM/yyyy HH:mm:ss. Optional args: output pattern, input pattern."
+    },
+    {
+      "name": "maskPan",
+      "description": "Masks a PAN for safe receipt display."
+    },
+    {
+      "name": "mask",
+      "description": "Masks any sensitive value. Args: showFirst, showLast, optional mask character. Examples: mask, mask:0,2, mask:2,4,\"#\"."
+    },
+    {
+      "name": "padLeft",
+      "description": "Pads a value on the left to the target width."
+    },
+    {
+      "name": "padRight",
+      "description": "Pads a value on the right to the target width."
+    },
+    {
+      "name": "padCenter",
+      "description": "Centers a value within the target width."
+    }
+  ]
+}

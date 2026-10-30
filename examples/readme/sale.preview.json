@@ -1,0 +1,11 @@
+{
+  "merchant": "Coffee & Code",
+  "reference": "RCT-001",
+  "currency": "USD",
+  "total": "10.00",
+  "items": [
+    {"name": "Latte", "quantity": 1, "total": "4.50"},
+    {"name": "Brownie", "quantity": 1, "total": "3.00"},
+    {"name": "Filter coffee", "quantity": 1, "total": "2.50"}
+  ]
+}

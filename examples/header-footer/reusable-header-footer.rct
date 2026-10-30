@@ -1,0 +1,28 @@
+receipt "reusable_header_footer_demo"
+
+meta:
+  width: 34
+  paper: "58mm"
+  copy: "customer"
+  templateVersion: 1
+
+use header "merchant-default"
+use footer "customer-default"
+
+body:
+  kv "DATE:" "{{txn.date | datetime}}"
+  kv "INVOICE:" "{{txn.invoiceId}}"
+  if card.stan:
+    kv "STAN:" "{{card.stan}}"
+  if card.rrn:
+    kv "RRN:" "{{card.rrn}}"
+  if card.authCode:
+    kv "AUTH CODE:" "{{card.authCode}}"
+  if card.pan:
+    kv "CARD:" "{{card.pan | maskPan}}"
+  if card.entryLabel:
+    kv "ENTRY:" "{{card.entryLabel}}"
+  divider "_"
+  center bold "{{txn.title}}"
+  center bold "{{txn.amount | money:txn.currency}}"
+  center "{{txn.message | upper}}"

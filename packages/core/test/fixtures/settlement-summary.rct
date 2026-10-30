@@ -1,0 +1,54 @@
+receipt "settlement_summary"
+
+meta:
+  width: 34
+  paper: "40mm"
+  copy: "merchant"
+  templateVersion: 3
+
+spacer 2
+if logoRef:
+  image "{{logoRef}}" 300 300
+  spacer 1
+
+center bold "{{report.title}}"
+center "{{report.subtitle}}"
+divider "_"
+
+spacer 1
+center bold "{{merchant.merchantName}}"
+center small "{{merchant.location}}"
+
+spacer 1
+kv "TID" "{{terminal.tid}}"
+kv "DEVICE" "{{terminal.serialNo}}"
+kv "BATCH" "{{report.batchNumber}}"
+kv "OPENED" "{{report.openedAt}}"
+kv "SETTLED" "{{report.settledAt}}"
+divider
+kv "SUCCESS TXNS" "{{report.successfulTransactionCount}}"
+divider "-"
+
+spacer 1
+table:
+  headers: "CURRENCY" "TXNS" "TOTAL"
+  weights: 0.34 0.18 0.48
+  alignments: start center end
+  for currencySummary in report.currencySummaries:
+    row "{{currencySummary.currency}}" "{{currencySummary.successfulTransactions}}" "{{currencySummary.totalAmount}}"
+
+spacer 1
+center bold "PAYMENT MIX"
+for currencySummary in report.currencySummaries:
+  center "CURRENCY: {{currencySummary.currency}}"
+  table:
+    headers: "METHOD" "TXNS" "TOTAL"
+    weights: 0.44 0.16 0.40
+    alignments: start center end
+    for methodSummary in currencySummary.methodSummaries:
+      row "{{methodSummary.paymentMethod}}" "{{methodSummary.successfulTransactions}}" "{{methodSummary.totalAmount}}"
+  spacer 1
+
+spacer 1
+center "{{report.note}}"
+spacer 3

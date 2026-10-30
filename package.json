@@ -1,0 +1,27 @@
+{
+  "name": "receiptscript-workspace",
+  "private": true,
+  "version": "0.3.0",
+  "description": "ReceiptScript engine and authoring tools",
+  "workspaces": ["packages/core", "vscode-extension"],
+  "scripts": {
+    "build": "node scripts/build-extension.mjs",
+    "test": "npm run build && npm test --workspace @receiptscript/core && npm test --workspace rct-support",
+    "test:core": "npm test --workspace @receiptscript/core",
+    "check:types": "tsc --noEmit -p test/types/tsconfig.json",
+    "check:browser": "node scripts/check-browser.mjs",
+    "release:kotlin": "node scripts/build-kotlin-release.mjs",
+    "media": "node scripts/build-readme-media.mjs",
+    "package:extension": "npm run build && npm exec --workspace rct-support -- vsce package --no-dependencies --out ../artifacts/receiptscript.vsix",
+    "check:packages": "npm pack --workspace @receiptscript/core --dry-run"
+  },
+  "devDependencies": {
+    "@vscode/vsce": "^3.6.2",
+    "esbuild": "^0.25.0",
+    "playwright-core": "^1.64.1",
+    "yazl": "^3.3.1",
+    "typescript": "^5.9.0"
+  },
+  "engines": {"node": ">=22"},
+  "license": "MIT"
+}

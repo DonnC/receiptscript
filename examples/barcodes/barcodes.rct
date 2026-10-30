@@ -1,0 +1,24 @@
+receipt "barcodes"
+
+meta:
+  width: 32
+  font: 14
+
+center bold "BARCODE FORMATS"
+divider
+center "Code 128"
+barcode "{{codes.reference}}" 300 70 "code128"
+center "Code 39"
+barcode "RCT-2026" 300 70 "code39"
+center "EAN-13"
+barcode "5901234123457" 300 70 "ean13"
+center "EAN-8"
+barcode "96385074" 300 70 "ean8"
+center "UPC-A"
+barcode "012345678905" 300 70 "upca"
+center "ITF"
+barcode "12345678" 300 70 "itf"
+divider
+center "QR code"
+qr "{{codes.url}}" 180
+spacer 2
