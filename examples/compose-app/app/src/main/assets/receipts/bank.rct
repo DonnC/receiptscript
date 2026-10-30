@@ -6,6 +6,7 @@ meta:
 header:
   center bold "{{merchant.name}}"
   center small "{{merchant.address}}"
+  spacer 1
 body:
   kv "TID" "{{terminal.tid}}"
   kv "MID" "{{terminal.mid}}"
@@ -17,10 +18,12 @@ body:
   divider "-" 24
   kv "CARD" "{{card.pan | maskPan}}"
   kv "ENTRY" "{{card.entry}}"
+  spacer 1
   center bold "{{txn.title}}"
   center bold "{{txn.total | money:txn.currency}}" 30
   divider "_"
   center bold "{{card.result}}"
+  spacer 1
   kv "AUTH CODE" "{{card.auth}}"
 footer:
   center "CUSTOMER COPY"

@@ -10,30 +10,70 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
 import com.google.zxing.BarcodeFormat as ZxingFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.MultiFormatWriter
 import zw.co.donnclab.rct.*
 
+private val ReceiptFont = FontFamily(Font(R.font.receipt_mono))
+
+/** A presentation edge only; never inserted into the printable receipt blocks. */
+private object ReceiptPaper : Shape {
+    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
+        val tooth = with(density) { 7.dp.toPx() }
+        val depth = with(density) { 2.dp.toPx() }
+        val path = Path().apply {
+            moveTo(0f, 0f); lineTo(size.width, 0f); lineTo(size.width, size.height - depth)
+            var x = size.width
+            while (x > 0f) {
+                lineTo((x - tooth / 2).coerceAtLeast(0f), size.height)
+                x = (x - tooth).coerceAtLeast(0f)
+                lineTo(x, size.height - depth)
+            }
+            close()
+        }
+        return Outline.Generic(path)
+    }
+}
+
 /** Displays the resolved Receipt, not a second template. Native device fonts can still differ. */
 @Composable
 fun ReceiptPreview(receipt: Receipt, modifier: Modifier = Modifier) {
     val context = LocalContext.current
-    BoxWithConstraints(modifier.background(Color.White).padding(18.dp)) {
+    val density = LocalDensity.current
+    val measurer = rememberTextMeasurer()
+    BoxWithConstraints(modifier.shadow(6.dp, ReceiptPaper).clip(ReceiptPaper)
+        .background(Color.White).padding(horizontal = 18.dp, vertical = 24.dp)) {
         val paperWidth = maxWidth.value
         val columns = receipt.meta?.width ?: 32
-        val base = paperWidth / (columns * 0.6f)
+        val reference = measurer.measure(AnnotatedString("0".repeat(columns)),
+            TextStyle(fontFamily = ReceiptFont, fontSize = with(density) { 24.dp.toSp() }), softWrap = false)
+        val base = 24f * paperWidth * density.density / reference.size.width
         val metaFont = receipt.meta?.font ?: 24f
         val paperDots = if (receipt.meta?.paper == "80mm") 576f else 384f
         fun textStyle(style: ReceiptTextStyle = ReceiptTextStyle()): TextStyle {
@@ -43,9 +83,10 @@ fun ReceiptPreview(receipt: Receipt, modifier: Modifier = Modifier) {
                 RctFontSize.MIDDLE -> metaFont
             }
             return TextStyle(
-                color = Color.Black, fontSize = (base * font / metaFont).sp,
-                lineHeight = (base * font / metaFont * 1.45f).sp,
-                fontFamily = FontFamily.Monospace,
+                color = Color(0xFF20201D), fontSize = with(density) { (base * font / metaFont).dp.toSp() },
+                lineHeight = with(density) { (base * font / metaFont * 1.18f).dp.toSp() },
+                fontFamily = ReceiptFont,
+                platformStyle = PlatformTextStyle(includeFontPadding = false),
                 fontWeight = if (style.bold) FontWeight.Bold else FontWeight.Normal,
                 textDecoration = if (style.underline) TextDecoration.Underline else null
             )
@@ -73,12 +114,14 @@ fun ReceiptPreview(receipt: Receipt, modifier: Modifier = Modifier) {
                         })
                     is ReceiptBlock.KeyValue -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(block.key, Modifier.weight(1f), style = textStyle(block.style))
-                        Text(block.value, Modifier.weight(1f), style = textStyle(block.style), textAlign = TextAlign.End)
+                        Text(block.value, Modifier.widthIn(max = (paperWidth * 0.78f).dp), style = textStyle(block.style), textAlign = TextAlign.End)
                     }
-                    is ReceiptBlock.Spacer -> Spacer(Modifier.height((base * 1.45f * block.lines).dp))
+                    is ReceiptBlock.Spacer -> Spacer(Modifier.height((base * 1.18f * block.lines).dp))
                     is ReceiptBlock.Divider -> {
                         val fraction = (block.length.toFloat() / columns).coerceIn(0f, 1f)
-                        if (block.pattern == "_") Box(Modifier.padding(vertical = 5.dp).fillMaxWidth(fraction).height(1.dp).background(Color.Black))
+                        if (block.pattern == "_") Box(Modifier.height((base * 1.18f).dp).fillMaxWidth(fraction), contentAlignment = Alignment.Center) {
+                            Box(Modifier.fillMaxWidth().height(0.6.dp).background(Color(0xFF363630)))
+                        }
                         else Text(buildString { repeat(block.length) { append(block.pattern) } }.take(block.length),
                             style = textStyle(), softWrap = false)
                     }
@@ -102,7 +145,7 @@ fun ReceiptPreview(receipt: Receipt, modifier: Modifier = Modifier) {
                     }
                     is ReceiptBlock.QrCode -> {
                         val bitmap = remember(block) { encodeCode(block.content, ZxingFormat.QR_CODE, block.size, block.size).asImageBitmap() }
-                        Image(bitmap, "QR: ${block.content}", Modifier.size((paperWidth * block.size / paperDots).coerceAtMost(paperWidth).dp))
+                        Image(bitmap, "QR: ${block.content}", Modifier.size((paperWidth * block.size / paperDots).coerceAtMost(paperWidth).dp), filterQuality = FilterQuality.None)
                     }
                     is ReceiptBlock.Barcode -> {
                         val bitmap = remember(block) { encodeCode(block.content, ZxingFormat.valueOf(when (block.format) {
@@ -115,7 +158,7 @@ fun ReceiptPreview(receipt: Receipt, modifier: Modifier = Modifier) {
                         }), block.width, block.height).asImageBitmap() }
                         Image(bitmap, "Barcode: ${block.content}", Modifier
                             .width((paperWidth * block.width / paperDots).coerceAtMost(paperWidth).dp)
-                            .height((paperWidth * block.height / paperDots).dp), contentScale = ContentScale.FillBounds)
+                            .height((paperWidth * block.height / paperDots).dp), contentScale = ContentScale.FillBounds, filterQuality = FilterQuality.None)
                     }
                 }
             }

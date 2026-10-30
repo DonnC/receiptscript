@@ -98,13 +98,16 @@ fun ReceiptGallery(printer: SamplePrinter? = null) {
                     receiptDocument == null -> Text("Could not render: ${loaded.exceptionOrNull()?.message}", Modifier.padding(20.dp))
                     else -> {
                         key(example.id, tab) {
-                            Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp)) {
+                            Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp)) {
                                 if (tab == 0) {
                                     Box(Modifier.widthIn(max = 520.dp).fillMaxWidth().align(androidx.compose.ui.Alignment.CenterHorizontally)) {
                                         ReceiptPreview(receiptDocument.receipt)
                                     }
-                                } else Text(if (tab == 1) receiptDocument.source else receiptDocument.contextJson,
-                                    Modifier.padding(12.dp), fontFamily = FontFamily.Monospace, fontSize = 12.sp)
+                                } else CodePanel(
+                                    source = if (tab == 1) receiptDocument.source else receiptDocument.contextJson,
+                                    filename = if (tab == 1) "${example.id}.rct" else "${example.id}.preview.json",
+                                    language = if (tab == 1) CodeLanguage.RCT else CodeLanguage.JSON
+                                )
                             }
                         }
                         Button(enabled = !printing, modifier = Modifier.fillMaxWidth().padding(16.dp), onClick = {

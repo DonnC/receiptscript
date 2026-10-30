@@ -39,6 +39,11 @@ and a long multi-currency report. Each opens a receipt preview, its actual `.rct
 source, and the companion JSON. All examples use synthetic data; the fiscal sample
 does not sign, submit or certify a fiscal document.
 
+The receipt preview uses a bundled Inconsolata font, compact thermal-style leading
+and a paper presentation. Source and data panels provide syntax highlighting,
+line numbers and selectable, horizontally scrollable code. These are preview
+conventions, not a promise that every vendor's native font is identical.
+
 Templates and preview data live together in
 [`app/src/main/assets/receipts`](examples/compose-app/app/src/main/assets/receipts).
 You can open those same files in the VS Code extension. `SampleCatalog` renders

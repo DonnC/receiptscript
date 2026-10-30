@@ -3,6 +3,7 @@ meta:
   width: 32
   font: 24
 center bold "{{merchant.name}}"
+spacer 1
 kv "DATE" "{{txn.date | datetime}}"
 kv "RECEIPT" "{{txn.reference}}"
 divider "_"
