@@ -30,6 +30,19 @@ target JVM 11; Android below API 26 needs Java time desugaring.
 Open [`examples/compose-app`](examples/compose-app) as a project in Android Studio
 (JDK 17, Android SDK 36), then run the `app` configuration on an API 26+ emulator
 or device. It is a standalone Jetpack Compose app, not a change to your POS app.
+Open **that folder itself**, not the repository root: the root is intentionally
+the JVM library build and does not include an Android app module. After Gradle
+sync, choose **ReceiptScript Starter**, select your device, then use Run or Debug
+(Shift+F10 / Shift+F9 on the Windows default keymap). The shared configuration
+launches `MainActivity`, and the sample's daemon criteria pin JDK 17 separately
+from the root project. Keep the app's build variant on `debug`.
+
+If Studio asks for a Gradle JVM, choose an installed JDK 17 in **Settings > Build,
+Execution, Deployment > Build Tools > Gradle**. Do not inherit a root-project JDK
+25 setting for this Gradle 8.13 sample. To debug Kotlin code, start **Debug** and
+set a breakpoint in `ReceiptGallery` or `renderPreview`, then open a receipt on
+the device. The Design preview panel is not the running Android debug process.
+
 From that directory you can also run `./gradlew :app:assembleDebug :app:testDebugUnitTest`
 (`.\gradlew.bat` in PowerShell).
 

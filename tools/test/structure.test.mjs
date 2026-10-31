@@ -13,3 +13,13 @@ test("Kotlin is the primary module and authoring dependencies stay under tools",
   }
   assert.match(readFileSync(root + "settings.gradle.kts", "utf8"), /include\(":core"\)/);
 });
+
+test("Android starter has a shared runnable configuration and a pinned daemon JDK", () => {
+  const sample = root + "examples/compose-app/";
+  assert.match(readFileSync(sample + "gradle/gradle-daemon-jvm.properties", "utf8"), /toolchainVersion=17/);
+  const run = readFileSync(sample + ".run/ReceiptScript_Starter.run.xml", "utf8");
+  assert.match(run, /AndroidRunConfigurationType/);
+  assert.match(run, /module name="ReceiptScriptStarter.app"/);
+  assert.match(run, /name="MODE" value="default_activity"/);
+  assert.match(readFileSync(sample + "settings.gradle.kts", "utf8"), /include\(":app"\)/);
+});
