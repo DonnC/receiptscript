@@ -4,17 +4,16 @@ import {copyFile, mkdir, mkdtemp, readFile, readdir, stat, writeFile} from "node
 import {homedir} from "node:os";
 import {delimiter, dirname, join, resolve} from "node:path";
 import {spawnSync} from "node:child_process";
-import {fileURLToPath} from "node:url";
 import yazl from "yazl";
 import {packagedReadme} from "./prepare-package-readmes.mjs";
 
-const root = fileURLToPath(new URL("..", import.meta.url));
+import {repositoryRoot as root} from "./paths.mjs";
 process.chdir(root);
-const {version} = JSON.parse(await readFile("package.json", "utf8"));
-const lock = JSON.parse(await readFile("scripts/kotlin-toolchain.lock.json", "utf8"));
+const {version} = JSON.parse(await readFile("tools/package.json", "utf8"));
+const lock = JSON.parse(await readFile("tools/scripts/kotlin-toolchain.lock.json", "utf8"));
 const gradle = await readFile("build.gradle.kts", "utf8");
 if (!gradle.includes(`version = "${version}"`) || !gradle.includes(`kotlin("jvm") version "${lock.kotlin}"`)) {
-  throw new Error("Keep package.json, build.gradle.kts and the Kotlin toolchain lock versions aligned.");
+  throw new Error("Keep tools/package.json, build.gradle.kts and the Kotlin toolchain lock versions aligned.");
 }
 if (process.env.GITHUB_REF?.startsWith("refs/tags/") && process.env.GITHUB_REF !== `refs/tags/v${version}`) {
   throw new Error(`The release tag must match the package version: v${version}`);
@@ -89,13 +88,13 @@ async function compile(directories, destination, classpath, module) {
 const coreClasses = join(work, "core");
 const driverClasses = join(work, "escpos");
 const testClasses = join(work, "tests");
-await compile(["kotlin/src/main/kotlin"], coreClasses, [stdlib, annotations], "receiptscript_core");
+await compile(["core/src/main/kotlin"], coreClasses, [stdlib, annotations], "receiptscript_core");
 await compile(["drivers/escpos/src/main/kotlin"], driverClasses, [coreClasses, stdlib, annotations, zxing], "receiptscript_escpos");
 const testPath = [coreClasses, driverClasses, stdlib, annotations, zxing, jars.get("junit"), jars.get("hamcrest-core")];
-await compile(["kotlin/src/test/kotlin", "drivers/escpos/src/test/kotlin", "examples/kotlin", "examples/kotlin-drivers"],
+await compile(["core/src/test/kotlin", "drivers/escpos/src/test/kotlin", "examples/kotlin", "examples/kotlin-drivers"],
   testClasses, testPath, "receiptscript_tests");
 const testNames = [];
-for (const file of [...await files("kotlin/src/test/kotlin"), ...await files("drivers/escpos/src/test/kotlin")].filter(file => file.endsWith("Test.kt"))) {
+for (const file of [...await files("core/src/test/kotlin"), ...await files("drivers/escpos/src/test/kotlin")].filter(file => file.endsWith("Test.kt"))) {
   const source = await readFile(file, "utf8");
   const packageName = /^package\s+(\S+)/m.exec(source)[1];
   const name = /([^/\\]+)\.kt$/.exec(file)[1];
@@ -120,7 +119,8 @@ async function zip(destination, entries) {
     archive.outputStream.on("error", reject).pipe(output);
   });
   for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name, "en"))) {
-    archive.addBuffer(entry.bytes, entry.name.replaceAll("\\", "/"), {mtime, mode: 0o100644});
+    const name = entry.name.replaceAll("\\", "/");
+    archive.addBuffer(entry.bytes, name, {mtime, mode: name.endsWith("/gradlew") || name.endsWith(".sh") ? 0o100755 : 0o100644});
   }
   archive.end();
   await done;
@@ -133,14 +133,14 @@ async function jar(directory, target, prefix = "") {
 }
 await jar(coreClasses, coreJar);
 await jar(driverClasses, driverJar);
-await jar("kotlin/src/main/kotlin", join(stage, "sources", `receiptscript-core-${version}-sources.jar`));
+await jar("core/src/main/kotlin", join(stage, "sources", `receiptscript-core-${version}-sources.jar`));
 await jar("drivers/escpos/src/main/kotlin", join(stage, "sources", `receiptscript-escpos-${version}-sources.jar`));
 await copyFile(zxing, join(stage, "optional", "zxing-core-3.5.3.jar"));
 await copyFile(stdlib, join(stage, "runtime-jvm", `kotlin-stdlib-${lock.kotlin}.jar`));
 
 // Prove the published surface works using only the assembled JARs and their runtime dependencies.
 const consumer = join(work, "consumer");
-await compile(["test/release", "examples/readme"], consumer, [coreJar, driverJar, stdlib, zxing], "release_consumer");
+await compile(["tools/test/release", "examples/readme"], consumer, [coreJar, driverJar, stdlib, zxing], "release_consumer");
 run(["-cp", [consumer, coreJar, driverJar, stdlib, zxing].join(delimiter), "receiptscript.releasecheck.ConsumerKt", resolve("examples/readme/sale.rct")]);
 
 for (const name of ["LICENSE", "THIRD_PARTY_NOTICES.md"]) await copyFile(name, join(stage, name));
@@ -149,6 +149,12 @@ await copyFile("docs/licenses/Apache-2.0.txt", join(stage, "licenses", "Apache-2
 await writeFile(join(stage, "README.md"), packagedReadme);
 await mkdir(join(stage, "examples"), {recursive: true});
 for (const file of await files("examples")) {
+  const target = join(stage, file);
+  await mkdir(dirname(target), {recursive: true});
+  await copyFile(file, target);
+}
+// The Android starter's optional renderer is built from source in the binary distribution.
+for (const file of await files("drivers/android")) {
   const target = join(stage, file);
   await mkdir(dirname(target), {recursive: true});
   await copyFile(file, target);

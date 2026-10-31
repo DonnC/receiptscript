@@ -6,6 +6,7 @@ import {HtmlRenderer} from "../src/html.js";
 
 function visit(directory) {
   for (const entry of readdirSync(directory, {withFileTypes: true})) {
+    if (["build", ".gradle", ".kotlin", ".idea"].includes(entry.name)) continue;
     const url = new URL(entry.name + (entry.isDirectory() ? "/" : ""), directory);
     if (entry.isDirectory()) visit(url);
     else if (entry.name.endsWith(".preview.json")) {

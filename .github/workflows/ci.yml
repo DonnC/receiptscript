@@ -4,6 +4,9 @@ permissions:
   contents: read
 jobs:
   javascript:
+    defaults:
+      run:
+        working-directory: tools
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
@@ -15,6 +18,7 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: npm
+          cache-dependency-path: tools/package-lock.json
       - run: npm ci
       - run: npm test
       - run: npm run check:types
@@ -34,7 +38,7 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v4
-      - run: bash gradlew :kotlin:test :drivers:escpos:test :kotlin:publishToMavenLocal :drivers:escpos:publishToMavenLocal
+      - run: bash gradlew :core:test :drivers:escpos:test :core:publishToMavenLocal :drivers:escpos:publishToMavenLocal
   android-starter:
     runs-on: ubuntu-latest
     steps:
@@ -49,9 +53,11 @@ jobs:
           log-accepted-android-sdk-licenses: false
       - run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
       - uses: gradle/actions/setup-gradle@v4
-      - run: bash gradlew :app:testDebugUnitTest :app:assembleDebug
+      - run: bash gradlew :drivers:android:testDebugUnitTest :drivers:android:assembleRelease :app:testDebugUnitTest :app:assembleDebug
         working-directory: examples/compose-app
       - uses: actions/upload-artifact@v4
         with:
           name: receiptscript-android-starter
-          path: examples/compose-app/app/build/outputs/apk/debug/*.apk
+          path: |
+            examples/compose-app/app/build/outputs/apk/debug/*.apk
+            drivers/android/build/outputs/aar/*.aar

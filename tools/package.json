@@ -3,16 +3,16 @@
   "private": true,
   "version": "0.3.0",
   "description": "ReceiptScript engine and authoring tools",
-  "workspaces": ["packages/core", "vscode-extension"],
+  "workspaces": ["web", "vscode-extension"],
   "scripts": {
     "build": "node scripts/build-extension.mjs",
-    "test": "npm run build && npm test --workspace @receiptscript/core && npm test --workspace rct-support",
+    "test": "npm run build && node --test test/*.test.mjs && npm test --workspace @receiptscript/core && npm test --workspace rct-support",
     "test:core": "npm test --workspace @receiptscript/core",
     "check:types": "tsc --noEmit -p test/types/tsconfig.json",
     "check:browser": "node scripts/check-browser.mjs",
     "release:kotlin": "node scripts/build-kotlin-release.mjs",
     "media": "node scripts/build-readme-media.mjs",
-    "package:extension": "npm run build && npm exec --workspace rct-support -- vsce package --no-dependencies --out ../artifacts/receiptscript.vsix",
+    "package:extension": "npm run build && npm exec --workspace rct-support -- vsce package --no-dependencies --out ../../artifacts/receiptscript.vsix",
     "check:packages": "npm pack --workspace @receiptscript/core --dry-run"
   },
   "devDependencies": {

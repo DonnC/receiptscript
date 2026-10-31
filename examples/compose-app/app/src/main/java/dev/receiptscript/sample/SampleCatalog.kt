@@ -36,6 +36,7 @@ class SampleCatalog(private val readAsset: (String) -> String) {
             SampleExample("discount", "A better deal", "Line discounts, savings and final amount due."),
             SampleExample("shared", "One brand, many receipts", "Shared logo, header and footer fragments."),
             SampleExample("fiscal", "Fiscal-style invoice", "Synthetic fiscal fields and verification QR. Not certified."),
+            SampleExample("daily-total", "Daily totals", "A compact multi-currency operations receipt."),
             SampleExample("complex", "The end-of-day report", "Long, multi-currency tables without mixing currency totals.")
         )
     }

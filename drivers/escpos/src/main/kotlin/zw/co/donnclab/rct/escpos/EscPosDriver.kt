@@ -18,6 +18,20 @@ class EscPosDriver(
     private val profile: EscPosProfile = EscPosProfile.Portable58,
     private val images: (String) -> MonochromeImage? = { null }
 ) : ReceiptAdapter<ByteArray> {
+    /** Encodes an already laid-out receipt without scaling, extra band gaps or native text. */
+    fun renderRaster(bands: List<MonochromeImage>): ByteArray {
+        require(bands.isNotEmpty()) { "Raster receipt has no bands" }
+        val width = bands.first().width
+        require(width <= profile.printableWidthDots && bands.all { it.width == width }) { "Raster bands must share a printable width" }
+        require(bands.sumOf { it.height.toLong() } * width <= 16_777_216) { "Raster receipt exceeds pixel budget" }
+        val job = Job(null)
+        job.command(27, 64)
+        bands.forEach(job::raster)
+        job.command(27, 100, profile.feedAfterPrint)
+        if (profile.cutAfterPrint) job.command(29, 86, 1)
+        return job.bytes.toByteArray()
+    }
+
     override fun render(receipt: Receipt): ByteArray {
         val requestedColumns = receipt.meta?.width
         require(requestedColumns == null || requestedColumns > 0) { "Receipt width must be positive" }
@@ -124,7 +138,7 @@ class EscPosDriver(
             }
         }
 
-        private fun raster(image: MonochromeImage) {
+        fun raster(image: MonochromeImage) {
             require(profile.supportsRaster) { "This profile does not support raster images or codes" }
             require(image.width <= profile.printableWidthDots)
             applyStyle(ReceiptTextStyle(), RctAlign.CENTER)

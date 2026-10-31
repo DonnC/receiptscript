@@ -33,22 +33,24 @@ or device. It is a standalone Jetpack Compose app, not a change to your POS app.
 From that directory you can also run `./gradlew :app:assembleDebug :app:testDebugUnitTest`
 (`.\gradlew.bat` in PowerShell).
 
-The gallery contains seven working examples: a basic receipt, bank-style card
+The gallery contains eight working examples: a basic receipt, bank-style card
 payment, SME basket, discounted sale, shared header/footer, fiscal-style invoice,
-and a long multi-currency report. Each opens a receipt preview, its actual `.rct`
+daily totals, and a long multi-currency report. Each opens a receipt preview, its actual `.rct`
 source, and the companion JSON. All examples use synthetic data; the fiscal sample
 does not sign, submit or certify a fiscal document.
 
-The receipt preview uses a bundled Inconsolata font, compact thermal-style leading
-and a paper presentation. Source and data panels provide syntax highlighting,
-line numbers and selectable, horizontally scrollable code. These are preview
-conventions, not a promise that every vendor's native font is identical.
+The optional Android adapter lays out each receipt once at the printer's dot
+width, using a bundled Inconsolata font. The app displays those monochrome bitmap
+bands inside a compact paper card and sends the **same bands** to its printer
+hook. Text, tables, image sizing and line breaks are not calculated twice.
+Source and data panels provide syntax highlighting, line numbers and selectable,
+horizontally scrollable code.
 
 Templates and preview data live together in
 [`app/src/main/assets/receipts`](examples/compose-app/app/src/main/assets/receipts).
 You can open those same files in the VS Code extension. `SampleCatalog` renders
-them through the real Kotlin engine; `ReceiptPreview` displays that resolved
-`Receipt`, rather than a separately designed mock receipt. Android Studio also
+them through the real Kotlin engine; `ReceiptPreview` displays the rendered
+`RasterReceipt`, rather than a separately designed mock receipt. Android Studio also
 has gallery and bank-receipt `@Preview` functions.
 
 To print, replace `connectedPrinter(context)` in
@@ -57,16 +59,18 @@ with your integration. For example, for an already connected ESC/POS transport:
 
 ```kotlin
 fun connectedPrinter(context: Context): SamplePrinter =
-    escPosPrinter(context, yourPrinterConnection)
+    escPosPrinter(yourPrinterConnection)
 ```
 
-The helper resolves bundled logo images and runs encoding/writes on the IO
-dispatcher. Keep the connection alive until the job completes and close it when
-your app no longer owns it. Set the optional `EscPosProfile` to match your hardware.
+The helper encodes the already-rendered bands and writes on the IO dispatcher.
+Keep the connection alive until the job completes and close it when your app no
+longer owns it. Renderer width and `EscPosProfile.printableWidthDots` must match;
+the helper rejects a mismatch rather than silently scaling the receipt.
 
-For an SDK printer call `receipt.render(yourReceiptDriver)` and await the SDK's
-completion callback. The button passes the **same Receipt object** currently
-shown. No printer is configured by default, and the sample never pretends to
+For an SDK printer, print every `raster.bands` bitmap at its original width with
+no extra feed between bands, and await the SDK's completion callback. The button
+passes the **same RasterReceipt object** currently shown. No printer is configured
+by default, and the sample never pretends to
 print successfully. Implement permissions, pairing and status handling for your
 chosen device using the integrations in step 3. The app has no network or
 Bluetooth permissions until you add a transport.
@@ -75,6 +79,40 @@ The starter builds the local library modules so it runs directly from this
 checkout. Inside the binary ZIP it automatically uses the bundled JARs instead.
 In your own app, use release JARs as shown above. Its Android
 build is separate, so engine and extension contributors do not need an Android SDK.
+
+### Matching preview and print
+
+[`drivers/android`](drivers/android) is an optional Android library (AAR), not part
+of the JVM engine. In a source checkout the starter includes it automatically.
+Build it independently with
+`./examples/compose-app/gradlew -p examples/compose-app :drivers:android:assembleRelease`
+using JDK 17 and Android SDK 36, or use the release AAR alongside the core JAR and
+ZXing dependency. It does not depend on Compose or any printer SDK.
+
+```kotlin
+val renderer = AndroidReceiptRenderer(
+    context,
+    RasterOptions(width = 384),
+    images = { reference -> loadYourBitmap(reference) }
+)
+val raster = receipt.render(renderer) // do this off the UI thread
+// Display raster.bands in order. Print the same bands, not a new rendering.
+```
+
+Long receipts are split into bounded, immutable bands without pagination gaps.
+The adapter checks a total pixel/height budget before allocating output bands;
+it does not allocate an unlimited-height bitmap. Images remain host-resolved.
+Pass an optional Android `Typeface` to use your own bundled font.
+The ESC/POS driver's `renderRaster(bands)` accepts equivalent `MonochromeImage`
+bands and preserves their pixels without native text substitution or resizing.
+
+This is **raster WYSIWYG**, not a guarantee about paper chemistry or printer
+calibration: density, margins, raster support and true dot width still require
+hardware testing. The separate `ReceiptDriver`/native-text integration in step 3
+remains available for smaller, faster print jobs, but native vendor fonts cannot
+promise pixel-identical preview output. IDE previews are authoring previews; the
+device raster is the final layout for this path.
+Configured trailing feed and cutting are mechanical finishing outside the preview image.
 
 ### Edit and preview a template
 
@@ -412,27 +450,34 @@ open, while the socket-owning examples close their own connections.
 - Treat failed writes as potentially partial; decide reprint/retry in your app.
 
 The engine and drivers have automated tests; target device behavior still needs
-hardware verification. Preview rendering and native printer fonts need not be
-pixel-identical. Templates should receive display data, not raw card/track/PIN data.
+hardware verification. Native-text fonts need not match the preview; raster
+printing uses its image bands unchanged. Templates should receive display data,
+not raw card/track/PIN data.
 
 <details>
 <summary>Building and releasing this project</summary>
 
 ```sh
-npm ci
-npm test
-npm run package:extension
-npm run release:kotlin  # JDK 17+ through JAVA_HOME; tests and verifies packaged JARs
+./gradlew :core:test :drivers:escpos:test
+npm --prefix tools ci
+npm --prefix tools test
+npm --prefix tools run package:extension
+npm --prefix tools run release:kotlin  # JDK 17+; verifies packaged JARs
 ```
+
+`core/` is the JVM library. Optional output adapters live in `drivers/`, and the
+runnable Android starter lives in `examples/compose-app/`. All JavaScript
+manifests, browser-engine sources, extension sources and authoring-tool tests
+are contained in `tools/`; normal Kotlin development does not require npm.
 
 The binary builder pins compiler/dependency checksums and runs an independent
 consumer against the assembled JARs. Source JARs are for navigation, not Android
 dependencies. The JVM-only standard library in the bundle is not needed when
 your Kotlin app already provides it. Gradle library builds are available through
-`:kotlin:assemble` and `:drivers:escpos:assemble`.
+`:core:assemble` and `:drivers:escpos:assemble`.
 
-Version tags matching `package.json` build JARs and the VSIX and attach them to
-GitHub Releases. Public stable publication is a maintainer action; no tag is
+Version tags matching `tools/package.json` build JARs, the Android AAR and the VSIX
+and attach them to GitHub Releases. Public stable publication is a maintainer action; no tag is
 created by a source push. The JavaScript engine is used for editor/portal tooling;
 Android integrations use the Kotlin libraries. The portal is a separate project.
 

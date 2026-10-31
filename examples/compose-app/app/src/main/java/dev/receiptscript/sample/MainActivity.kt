@@ -55,9 +55,9 @@ fun ReceiptGallery(printer: SamplePrinter? = null) {
     var printing by remember { mutableStateOf(false) }
     BackHandler(enabled = selected != null && !printing) { selected = null }
     val scope = rememberCoroutineScope()
-    val document by produceState<Result<SampleDocument>?>(null, selected) {
+    val document by produceState<Result<PreviewDocument>?>(null, selected) {
         value = null
-        selected?.let { example -> value = withContext(Dispatchers.IO) { runCatching { catalog.open(example) } } }
+        selected?.let { example -> value = withContext(Dispatchers.IO) { runCatching { renderPreview(context, catalog.open(example)) } } }
     }
     Scaffold { insets ->
         Column(Modifier.fillMaxSize().padding(insets).background(Brush.verticalGradient(
@@ -92,7 +92,8 @@ fun ReceiptGallery(printer: SamplePrinter? = null) {
                     }
                 }
                 val loaded = document
-                val receiptDocument = loaded?.getOrNull()
+                val previewDocument = loaded?.getOrNull()
+                val receiptDocument = previewDocument?.document
                 when {
                     loaded == null -> CircularProgressIndicator(Modifier.padding(24.dp))
                     receiptDocument == null -> Text("Could not render: ${loaded.exceptionOrNull()?.message}", Modifier.padding(20.dp))
@@ -101,7 +102,7 @@ fun ReceiptGallery(printer: SamplePrinter? = null) {
                             Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp)) {
                                 if (tab == 0) {
                                     Box(Modifier.widthIn(max = 520.dp).fillMaxWidth().align(androidx.compose.ui.Alignment.CenterHorizontally)) {
-                                        ReceiptPreview(receiptDocument.receipt)
+                                        ReceiptPreview(requireNotNull(previewDocument).raster)
                                     }
                                 } else CodePanel(
                                     source = if (tab == 1) receiptDocument.source else receiptDocument.contextJson,
@@ -111,11 +112,11 @@ fun ReceiptGallery(printer: SamplePrinter? = null) {
                             }
                         }
                         Button(enabled = !printing, modifier = Modifier.fillMaxWidth().padding(16.dp), onClick = {
-                            if (printer == null) message = "Connect your printer in SamplePrinter.kt. Pass this same Receipt to a vendor ReceiptDriver, or to ReceiptPrinter with an ESC/POS connection. No physical print has been attempted."
+                            if (printer == null) message = "Connect your printer in SamplePrinter.kt. Print these raster bands at their original dot width using your SDK bitmap API or the ESC/POS helper. No print has been attempted."
                             else scope.launch {
                                 printing = true
                                 try {
-                                    printer.print(receiptDocument.receipt)
+                                    printer.print(requireNotNull(previewDocument).raster)
                                     message = "Printer job completed. Confirm the physical output on your device."
                                 } catch (cancelled: CancellationException) { throw cancelled }
                                 catch (failure: Exception) { message = "Print failed: ${failure.message}. Output may be partial; check before retrying." }
@@ -141,5 +142,6 @@ private fun BankReceiptPreview() {
     val context = LocalContext.current
     val receipt = remember { SampleCatalog { context.assets.open(it).bufferedReader().use { r -> r.readText() } }
         .open(SampleCatalog.examples.first { it.id == "bank" }).receipt }
-    ReceiptPreview(receipt)
+    val raster = remember(receipt) { renderPreview(context, SampleDocument(receipt, "", "")).raster }
+    ReceiptPreview(raster)
 }

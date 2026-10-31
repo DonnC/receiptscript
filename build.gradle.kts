@@ -8,6 +8,6 @@ allprojects {
 
 tasks.register<Exec>("releaseBundle") {
     group = "distribution"
-    description = "Builds, tests and verifies the versioned Kotlin JAR distribution. Requires npm ci."
-    commandLine("node", "scripts/build-kotlin-release.mjs")
+    description = "Builds, tests and verifies the versioned Kotlin JAR distribution. Requires npm --prefix tools ci."
+    commandLine("node", "tools/scripts/build-kotlin-release.mjs")
 }

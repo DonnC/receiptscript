@@ -6,7 +6,7 @@ licenses; do not remove required notices from redistributed artifacts.
 | Component | Purpose | License / source |
 | --- | --- | --- |
 | BWIP-JS | Optional HTML QR/barcode encoding and VS Code preview | MIT; includes BWIPP and font notices, see installed package license files and https://github.com/metafloor/bwip-js |
-| Inconsolata | Bundled Android starter receipt-preview font | SIL Open Font License 1.1; font and license from BWIP-JS, notice included in the starter APK assets |
+| Inconsolata | Android raster renderer font | SIL Open Font License 1.1; font and license from BWIP-JS, notice included in the Android AAR assets |
 | Kotlin standard library | Kotlin runtime | Apache-2.0, https://github.com/JetBrains/kotlin |
 | ZXing core | Optional Kotlin ESC/POS QR/barcode encoding | Apache-2.0, https://github.com/zxing/zxing |
 | Gradle wrapper | Reproducible JVM build | Apache-2.0, https://github.com/gradle/gradle |

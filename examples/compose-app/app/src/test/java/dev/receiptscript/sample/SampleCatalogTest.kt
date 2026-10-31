@@ -10,7 +10,7 @@ class SampleCatalogTest {
     private val catalog = SampleCatalog { assets.resolve(it).readText() }
 
     @Test fun `every gallery example renders its real asset and preview data`() {
-        assertEquals(7, SampleCatalog.examples.size)
+        assertEquals(8, SampleCatalog.examples.size)
         SampleCatalog.examples.forEach { example ->
             val document = catalog.open(example)
             assertTrue(document.source.contains("receipt"))

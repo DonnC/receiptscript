@@ -1,0 +1,18 @@
+{
+  "merchant": {"name": "MAVAMBO MARKET", "address": "Harare, Zimbabwe", "logo": "logo.png"},
+  "terminal": "T0000421",
+  "date": "31/10/2026",
+  "generated": "2026-10-31T17:10:00",
+  "count": 44,
+  "currencies": [
+    {"code": "USD", "count": 41, "moneyIn": "1,520.25", "moneyOut": "85.00", "net": "1,435.25"},
+    {"code": "ZWG", "count": 3, "moneyIn": "1,250.00", "moneyOut": "0.00", "net": "1,250.00"}
+  ],
+  "types": [
+    {"label": "Sale (33)", "amount": "USD 1,415.25"},
+    {"label": "Sale (3)", "amount": "ZWG 1,250.00"},
+    {"label": "Sale + cashback (4)", "amount": "USD 105.00"},
+    {"label": "Cash withdrawal (2)", "amount": "USD -65.00"},
+    {"label": "Refund (2)", "amount": "USD -20.00"}
+  ]
+}

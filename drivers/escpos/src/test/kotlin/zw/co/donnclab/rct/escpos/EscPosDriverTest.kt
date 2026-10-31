@@ -7,6 +7,25 @@ import org.junit.Test
 import zw.co.donnclab.rct.*
 
 class EscPosDriverTest {
+    @org.junit.Test
+    fun `raster receipts preserve width and finish only once`() {
+        val driver = EscPosDriver()
+        val bands = listOf(MonochromeImage.fromPixels(384, 2) { _, _ -> true },
+            MonochromeImage.fromPixels(384, 3) { _, _ -> false })
+        val bytes = driver.renderRaster(bands)
+        org.junit.Assert.assertEquals(2, bytes.toList().windowed(2).count { it == listOf(29.toByte(), 118.toByte()) })
+        org.junit.Assert.assertEquals(1, bytes.toList().windowed(2).count { it == listOf(27.toByte(), 64.toByte()) })
+        val firstHeader = listOf(29, 118, 48, 0, 48, 0, 2, 0).map(Int::toByte)
+        val secondHeader = listOf(29, 118, 48, 0, 48, 0, 3, 0).map(Int::toByte)
+        val first = bytes.toList().windowed(8).indexOf(firstHeader) + 8
+        val second = bytes.toList().windowed(8).indexOf(secondHeader) + 8
+        org.junit.Assert.assertArrayEquals(ByteArray(96) { 255.toByte() }, bytes.copyOfRange(first, first + 96))
+        org.junit.Assert.assertArrayEquals(ByteArray(144), bytes.copyOfRange(second, second + 144))
+        org.junit.Assert.assertEquals(0, bytes.count { it == 10.toByte() })
+        org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            driver.renderRaster(listOf(bands.first(), MonochromeImage.fromPixels(200, 2) { _, _ -> false }))
+        }
+    }
     private fun receipt(vararg blocks: ReceiptBlock) = Receipt("test", null, blocks.toList())
 
     @Test fun `receipt metadata limits native text and table columns`() {

@@ -7,6 +7,9 @@ permissions:
   contents: read
 jobs:
   package:
+    defaults:
+      run:
+        working-directory: tools
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
@@ -21,6 +24,7 @@ jobs:
         with:
           node-version: '24'
           cache: npm
+          cache-dependency-path: tools/package-lock.json
       - run: npm ci
       - run: npm run release:kotlin
       - run: npm run package:extension
@@ -32,9 +36,37 @@ jobs:
             artifacts/receiptscript-*-binary.zip.sha256
             artifacts/receiptscript-*.jar
             artifacts/*.vsix
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+          log-accepted-android-sdk-licenses: false
+      - run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+      - run: bash gradlew :drivers:android:testDebugUnitTest :drivers:android:assembleRelease :app:testDebugUnitTest :app:assembleDebug
+        working-directory: examples/compose-app
+      - name: Name Android distribution files
+        run: |
+          version=$(node -p "require('./tools/package.json').version")
+          mkdir -p artifacts
+          cp drivers/android/build/outputs/aar/android-release.aar "artifacts/receiptscript-android-$version.aar"
+          cp examples/compose-app/app/build/outputs/apk/debug/app-debug.apk "artifacts/receiptscript-starter-$version.apk"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: receiptscript-android
+          path: |
+            artifacts/*.aar
+            artifacts/*.apk
   publish:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: package
+    needs: [package, android]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -43,6 +75,10 @@ jobs:
         with:
           name: receiptscript-binaries-ubuntu-latest
           path: release
+      - uses: actions/download-artifact@v4
+        with:
+          name: receiptscript-android
+          path: release
       - name: Publish tagged release assets
         env:
           GH_TOKEN: ${{ github.token }}
@@ -50,4 +86,4 @@ jobs:
         run: |
           args=()
           if [[ "$GITHUB_REF_NAME" == *-* ]]; then args+=(--prerelease); fi
-          gh release create "$GITHUB_REF_NAME" release/*.jar release/*.vsix release/*-binary.zip release/*.sha256 --verify-tag --title "ReceiptScript $GITHUB_REF_NAME" --generate-notes "${args[@]}"
+          gh release create "$GITHUB_REF_NAME" release/*.jar release/*.aar release/*.apk release/*.vsix release/*-binary.zip release/*.sha256 --verify-tag --title "ReceiptScript $GITHUB_REF_NAME" --generate-notes "${args[@]}"

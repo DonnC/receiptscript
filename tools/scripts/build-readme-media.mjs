@@ -2,10 +2,11 @@ import {existsSync} from "node:fs";
 import {readFile, mkdir, writeFile} from "node:fs/promises";
 import {fileURLToPath} from "node:url";
 import {chromium} from "playwright-core";
-import {ReceiptScript} from "../packages/core/src/index.js";
-import {HtmlRenderer} from "../packages/core/src/html.js";
+import {ReceiptScript} from "../web/src/index.js";
+import {HtmlRenderer} from "../web/src/html.js";
+import {repositoryRoot} from "./paths.mjs";
 
-process.chdir(fileURLToPath(new URL("..", import.meta.url)));
+process.chdir(repositoryRoot);
 const source = await readFile("examples/readme/sale.rct", "utf8");
 const data = JSON.parse(await readFile("examples/readme/sale.preview.json", "utf8"));
 const receipt = new ReceiptScript().compile(source).render(data);

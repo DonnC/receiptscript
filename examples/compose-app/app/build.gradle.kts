@@ -22,13 +22,14 @@ android {
 }
 kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11) } }
 dependencies {
-    if (findProject(":kotlin") != null) {
-        implementation(project(":kotlin"))
+    if (findProject(":core") != null) {
+        implementation(project(":core"))
         implementation(project(":drivers:escpos"))
     } else {
         implementation(files(rootProject.file("../../lib/receiptscript-core-0.3.0.jar")))
         implementation(files(rootProject.file("../../lib/receiptscript-escpos-0.3.0.jar")))
     }
+    implementation(project(":drivers:android"))
     implementation(platform("androidx.compose:compose-bom:2026.02.01"))
     implementation("androidx.activity:activity-compose:1.12.4")
     implementation("androidx.compose.material3:material3")

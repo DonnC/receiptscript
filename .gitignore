@@ -17,6 +17,6 @@ coverage/
 Thumbs.db
 shared/
 vscode-extension/shared/
-kotlin/gradle-wrapper/
-packages/core/README.md
-vscode-extension/README.md
+core/gradle-wrapper/
+tools/web/README.md
+tools/vscode-extension/README.md

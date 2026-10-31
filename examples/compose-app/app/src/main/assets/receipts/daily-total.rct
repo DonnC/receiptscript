@@ -1,0 +1,27 @@
+receipt "daily-total"
+meta:
+  width: 34
+  font: 21
+use header "merchant-header"
+body:
+  center bold "*** DAILY TOTALS ***"
+  center small "TID: {{terminal}}"
+  spacer 1
+  kv "DATE" "{{date}}"
+  kv "GENERATED" "{{generated | datetime}}"
+  kv "TOTAL TRANSACTIONS" "{{count}}"
+  spacer 1
+  for currency in currencies:
+    divider "-"
+    center bold "{{currency.code}} ({{currency.count}})"
+    divider "-"
+    kv "MONEY IN" "{{currency.moneyIn}}"
+    kv "MONEY OUT" "{{currency.moneyOut}}"
+    kv bold "NET" "{{currency.net}}"
+    spacer 1
+  divider "-"
+  center bold "BY TRANSACTION TYPE"
+  spacer 1
+  for type in types:
+    kv "{{type.label}}" "{{type.amount}}"
+  spacer 2
