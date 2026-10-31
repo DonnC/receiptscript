@@ -19,7 +19,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.CancellationException
@@ -39,7 +38,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun StarterTheme(content: @Composable () -> Unit) {
+internal fun StarterTheme(content: @Composable () -> Unit) {
     MaterialTheme(colorScheme = lightColorScheme(
         primary = Color(0xFF126B60), background = Color(0xFFF4F2EC), surface = Color(0xFFFFFDF8)
     ), content = content)
@@ -59,6 +58,50 @@ fun ReceiptGallery(printer: SamplePrinter? = null) {
         value = null
         selected?.let { example -> value = withContext(Dispatchers.IO) { runCatching { renderPreview(context, catalog.open(example)) } } }
     }
+    ReceiptGalleryScreen(
+        state = GalleryUiState(selected, document, tab, printing, printer != null),
+        onSelect = { tab = 0; selected = it },
+        onGallery = { selected = null },
+        onTab = { tab = it },
+        onPrint = {
+            val preview = document?.getOrNull()
+            if (preview != null) {
+                if (printer == null) message = "Connect your printer in SamplePrinter.kt. Print these raster bands at their original dot width using your SDK bitmap API or the ESC/POS helper. No print has been attempted."
+                else scope.launch {
+                    printing = true
+                    try {
+                        printer.print(preview.raster)
+                        message = "Printer job completed. Confirm the physical output on your device."
+                    } catch (cancelled: CancellationException) { throw cancelled }
+                    catch (failure: Exception) { message = "Print failed: ${failure.message}. Output may be partial; check before retrying." }
+                    finally { printing = false }
+                }
+            }
+        }
+    )
+    message?.let { text -> AlertDialog(onDismissRequest = { message = null }, title = { Text("Printer integration") },
+        text = { Text(text) }, confirmButton = { TextButton(onClick = { message = null }) { Text("Close") } }) }
+}
+
+data class GalleryUiState(
+    val selected: SampleExample? = null,
+    val document: Result<PreviewDocument>? = null,
+    val tab: Int = 0,
+    val printing: Boolean = false,
+    val printerConnected: Boolean = false
+)
+
+/** The same screen is used by the activity and Studio previews; it never loads or prints data. */
+@Composable
+fun ReceiptGalleryScreen(
+    state: GalleryUiState,
+    onSelect: (SampleExample) -> Unit = {},
+    onGallery: () -> Unit = {},
+    onTab: (Int) -> Unit = {},
+    onPrint: () -> Unit = {}
+) {
+    val selected = state.selected
+    val tab = state.tab
     Scaffold { insets ->
         Column(Modifier.fillMaxSize().padding(insets).background(Brush.verticalGradient(
             listOf(MaterialTheme.colorScheme.background, MaterialTheme.colorScheme.surface)))) {
@@ -68,14 +111,14 @@ fun ReceiptGallery(printer: SamplePrinter? = null) {
                     Text(selected?.title ?: "Small paper. Big possibilities.", fontFamily = FontFamily.Serif,
                         style = MaterialTheme.typography.headlineSmall)
                 }
-                if (selected != null) TextButton(onClick = { selected = null }) { Text("Gallery") }
+                if (selected != null) TextButton(onClick = onGallery) { Text("Gallery") }
             }
             val example = selected
             if (example == null) {
                 Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text("Real templates. One engine. Your printer.", style = MaterialTheme.typography.bodyMedium)
                     SampleCatalog.examples.forEachIndexed { index, item ->
-                        OutlinedCard(Modifier.fillMaxWidth().clickable { tab = 0; selected = item }, shape = RoundedCornerShape(16.dp)) {
+                        OutlinedCard(Modifier.fillMaxWidth().clickable { onSelect(item) }, shape = RoundedCornerShape(16.dp)) {
                             Row(Modifier.padding(18.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                                 Text("0${index + 1}", fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.primary)
                                 Column { Text(item.title, fontWeight = FontWeight.SemiBold); Text(item.description, style = MaterialTheme.typography.bodySmall) }
@@ -88,10 +131,10 @@ fun ReceiptGallery(printer: SamplePrinter? = null) {
             } else {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
                     listOf("Receipt", ".rct", "Data").forEachIndexed { index, label ->
-                        TextButton(onClick = { tab = index }) { Text(if (tab == index) "[$label]" else label) }
+                        TextButton(onClick = { onTab(index) }) { Text(if (tab == index) "[$label]" else label) }
                     }
                 }
-                val loaded = document
+                val loaded = state.document
                 val previewDocument = loaded?.getOrNull()
                 val receiptDocument = previewDocument?.document
                 when {
@@ -111,37 +154,12 @@ fun ReceiptGallery(printer: SamplePrinter? = null) {
                                 )
                             }
                         }
-                        Button(enabled = !printing, modifier = Modifier.fillMaxWidth().padding(16.dp), onClick = {
-                            if (printer == null) message = "Connect your printer in SamplePrinter.kt. Print these raster bands at their original dot width using your SDK bitmap API or the ESC/POS helper. No print has been attempted."
-                            else scope.launch {
-                                printing = true
-                                try {
-                                    printer.print(requireNotNull(previewDocument).raster)
-                                    message = "Printer job completed. Confirm the physical output on your device."
-                                } catch (cancelled: CancellationException) { throw cancelled }
-                                catch (failure: Exception) { message = "Print failed: ${failure.message}. Output may be partial; check before retrying." }
-                                finally { printing = false }
-                            }
-                        }) { Text(if (printing) "Printing..." else if (printer == null) "Connect your printer" else "Print receipt") }
+                        Button(enabled = !state.printing, modifier = Modifier.fillMaxWidth().padding(16.dp), onClick = onPrint) {
+                            Text(if (state.printing) "Printing..." else if (!state.printerConnected) "Connect your printer" else "Print receipt")
+                        }
                     }
                 }
             }
         }
     }
-    message?.let { text -> AlertDialog(onDismissRequest = { message = null }, title = { Text("Printer integration") },
-        text = { Text(text) }, confirmButton = { TextButton(onClick = { message = null }) { Text("Close") } }) }
-}
-
-@Preview(showBackground = true, widthDp = 390, heightDp = 820)
-@Composable
-private fun GalleryPreview() { StarterTheme { ReceiptGallery() } }
-
-@Preview(showBackground = true, widthDp = 390)
-@Composable
-private fun BankReceiptPreview() {
-    val context = LocalContext.current
-    val receipt = remember { SampleCatalog { context.assets.open(it).bufferedReader().use { r -> r.readText() } }
-        .open(SampleCatalog.examples.first { it.id == "bank" }).receipt }
-    val raster = remember(receipt) { renderPreview(context, SampleDocument(receipt, "", "")).raster }
-    ReceiptPreview(raster)
 }

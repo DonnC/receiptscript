@@ -51,7 +51,14 @@ Templates and preview data live together in
 You can open those same files in the VS Code extension. `SampleCatalog` renders
 them through the real Kotlin engine; `ReceiptPreview` displays the rendered
 `RasterReceipt`, rather than a separately designed mock receipt. Android Studio also
-has gallery and bank-receipt `@Preview` functions.
+has full-screen previews for the gallery, all eight receipts, RCT source and JSON data.
+
+Open [`ReceiptScreenPreviews.kt`](examples/compose-app/app/src/main/java/dev/receiptscript/sample/ReceiptScreenPreviews.kt)
+and select **Split** or **Design** in Android Studio, then build/refresh previews.
+The **Receipts** group uses the same catalogue, `.rct` files, JSON and raster adapter
+as the running app. Previews call the same stateless `ReceiptGalleryScreen` with
+already-rendered data, so they do not wait for background loading or connect to a
+printer. The **Gallery** and **Code** groups preview the other screen states.
 
 To print, replace `connectedPrinter(context)` in
 [`SamplePrinter.kt`](examples/compose-app/app/src/main/java/dev/receiptscript/sample/SamplePrinter.kt)
