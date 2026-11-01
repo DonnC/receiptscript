@@ -1,4 +1,4 @@
-image "{{merchant.logo}}" 80 80
+image "{{merchant.logo}}" 200 300
 spacer 1
 center bold "{{merchant.name}}"
 center small "{{merchant.address}}"

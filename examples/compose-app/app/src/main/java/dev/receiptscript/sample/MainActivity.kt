@@ -40,7 +40,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 internal fun StarterTheme(content: @Composable () -> Unit) {
     MaterialTheme(colorScheme = lightColorScheme(
-        primary = Color(0xFF126B60), background = Color(0xFFF4F2EC), surface = Color(0xFFFFFDF8)
+        primary = Color(0xE8FA663B), background = Color(0xFFF4F2EC), surface = Color(0xFFFFFDF8)
     ), content = content)
 }
 
@@ -125,7 +125,6 @@ fun ReceiptGalleryScreen(
                             }
                         }
                     }
-                    Text("All data is synthetic. No payment processing or fiscal signing occurs.", style = MaterialTheme.typography.bodySmall)
                     Spacer(Modifier.height(16.dp))
                 }
             } else {
