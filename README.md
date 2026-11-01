@@ -12,16 +12,51 @@ contains the versioned Kotlin JARs, optional driver bundle and VS Code `.vsix`.
 Until a release is published, that page may be empty. The core is a plain JVM
 library usable directly in Android; it does not need an AAR.
 
+**0.4.0 is currently unreleased.** Moving a checkout or building a JAR/AAR does not
+publish a GitHub Release or a Maven artifact. Tagged releases are packaged by CI.
+
+All packages share the `MAJOR.MINOR.PATCH` version in `VERSION`. Patch releases
+contain compatible fixes; minor releases add features. Before `1.0.0`, incompatible
+API changes also increment the minor version and must be documented. After `1.0.0`,
+breaking changes increment the major version. A release tag is `v0.4.0`; artifact
+and dependency versions are `0.4.0`, without app names or commit hashes. A template's
+`meta.templateVersion` is its own layout revision, not the library version.
+
+Maintainers change `VERSION` and run `npm --prefix tools run version:sync`.
+Gradle reads that file directly; CI checks the engine, tools and extension stay aligned.
+
 ```kotlin
 // Selected release JARs go in app/libs. Kotlin supplies its own standard library.
-implementation(files("libs/receiptscript-core-0.3.0.jar"))
-implementation(files("libs/receiptscript-escpos-0.3.0.jar")) // optional
+implementation(files("libs/receiptscript-core-0.4.0.jar"))
+implementation(files("libs/receiptscript-escpos-0.4.0.jar")) // optional
 implementation("com.google.zxing:core:3.5.3") // optional driver's code encoder
 ```
 
 The release bundle also includes ZXing for offline use; choose that local JAR or
 the Maven dependency, not both. Use a Kotlin 2.3-compatible compiler. The libraries
 target JVM 11; Android below API 26 needs Java time desugaring.
+
+| Package | Purpose | Runtime dependencies |
+| --- | --- | --- |
+| `receiptscript-core` JAR | Template engine and resolved `Receipt` | Kotlin standard library |
+| `receiptscript-android` AAR | Monospace raster layout, PNG/JPEG and PDF export | Core JAR, ZXing |
+| `receiptscript-compose` AAR | Optional Compose receipt preview | Core JAR, Android AAR, Compose Foundation, coroutines-android |
+| `receiptscript-escpos` JAR | Optional printer commands and transports | Core JAR, ZXing |
+
+For local AAR installation, add the selected files in the **application module**
+and declare their runtime dependencies. The Compose package targets Compose BOM
+`2025.11.01` or newer and coroutines `1.10.2`; it does not require Material 3.
+The Kotlin engine has no Android or Compose dependencies.
+
+```kotlin
+// Optional Android output and UI, alongside the core JAR:
+implementation(files("libs/receiptscript-android-0.4.0.aar"))
+implementation(files("libs/receiptscript-compose-0.4.0.aar"))
+implementation("com.google.zxing:core:3.5.3")
+implementation(platform("androidx.compose:compose-bom:2025.11.01"))
+implementation("androidx.compose.foundation:foundation")
+implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
+```
 
 ## 1. Design the receipt
 
@@ -133,6 +168,53 @@ remains available for smaller, faster print jobs, but native vendor fonts cannot
 promise pixel-identical preview output. IDE previews are authoring previews; the
 device raster is the final layout for this path.
 Configured trailing feed and cutting are mechanical finishing outside the preview image.
+
+### Preview and share in an Android app
+
+The optional `receiptscript-compose` AAR supplies `ReceiptPreview`. It accepts a
+resolved `Receipt` directly, or the `RasterReceipt` already prepared for printing.
+Neither overload needs a printer connection. Typography comes from the same bundled
+monospace renderer, not the application's display font.
+
+```kotlin
+import zw.co.donnclab.rct.android.AndroidReceiptRenderer
+import zw.co.donnclab.rct.android.RasterOptions
+import zw.co.donnclab.rct.compose.ReceiptPreview
+import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.fillMaxWidth
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.File
+
+// In a coroutine; bitmap creation, encoding and asset reads stay off the UI thread.
+val rendered = withContext(Dispatchers.IO) {
+    receipt.render(AndroidReceiptRenderer(context, RasterOptions(width = 384), images = ::loadYourBitmap))
+}
+val png = withContext(Dispatchers.IO) { rendered.toImageBytes() }
+val pdf = withContext(Dispatchers.IO) { rendered.toPdfBytes() }
+// png/pdf expose bytes, mimeType and extension. Saving and FileProvider sharing belong to the app.
+withContext(Dispatchers.IO) {
+    File(context.cacheDir, "receipt.${pdf.extension}").writeBytes(pdf.bytes)
+}
+
+// Inside a composable:
+ReceiptPreview(rendered, Modifier.fillMaxWidth())
+// Or, for a receipt without media requiring a custom resolver:
+ReceiptPreview(receipt, Modifier.fillMaxWidth())
+```
+
+For media, pass the same configured `AndroidReceiptRenderer` through the preview's
+`renderer` parameter, or pass its rendered output. The component supplies receipt
+content only; cards, shadows, scrolling and action buttons remain application UI.
+It also works in Android Studio `@Preview`, without coroutine-loading placeholders.
+
+`toImageBytes()` defaults to lossless PNG; JPEG is optional via `ReceiptImageFormat.JPEG`.
+`toBitmap()` returns a caller-owned image. Dispose of it when finished, but never
+recycle cached print bands. Image export is limited to 16,777,216 pixels; use PDF
+for longer output. PDF streams the existing bands into pages at 203 DPI by default.
+`ReceiptPdfOptions(pageHeightDots = 1120, dotsPerInch = 203)` controls page geometry.
+Pagination preserves pixels rather than reflowing content, so a page boundary can
+split a visual line. All export APIs are synchronous and belong on a worker dispatcher.
 
 ### Edit and preview a template
 

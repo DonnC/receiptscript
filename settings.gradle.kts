@@ -4,4 +4,4 @@ rootProject.name = "receiptscript"
 include(":core")
 include(":drivers:escpos")
 
-// The optional Android adapter is built through examples/compose-app, keeping this build JVM-only.
+// Optional Android output and Compose UI are built through examples/compose-app; this build stays JVM-only.

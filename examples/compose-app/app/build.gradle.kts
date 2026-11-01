@@ -10,8 +10,8 @@ android {
         applicationId = "dev.receiptscript.sample"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.3.0"
+        versionCode = 2
+        versionName = project.version.toString()
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildFeatures { compose = true }
@@ -26,10 +26,11 @@ dependencies {
         implementation(project(":core"))
         implementation(project(":drivers:escpos"))
     } else {
-        implementation(files(rootProject.file("../../lib/receiptscript-core-0.3.0.jar")))
-        implementation(files(rootProject.file("../../lib/receiptscript-escpos-0.3.0.jar")))
+        implementation(files(rootProject.file("../../lib/receiptscript-core-${project.version}.jar")))
+        implementation(files(rootProject.file("../../lib/receiptscript-escpos-${project.version}.jar")))
     }
     implementation(project(":drivers:android"))
+    implementation(project(":ui:compose"))
     implementation(platform("androidx.compose:compose-bom:2026.02.01"))
     implementation("androidx.activity:activity-compose:1.12.4")
     implementation("androidx.compose.material3:material3")

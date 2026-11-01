@@ -4,4 +4,4 @@ plugins {
     kotlin("android") version "2.3.20" apply false
     id("org.jetbrains.kotlin.plugin.compose") version "2.3.20" apply false
 }
-allprojects { group = "dev.receiptscript"; version = "0.3.0" }
+allprojects { group = "dev.receiptscript"; version = rootProject.file("../../VERSION").readText().trim() }

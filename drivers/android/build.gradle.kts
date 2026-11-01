@@ -5,7 +5,10 @@ plugins {
 android {
     namespace = "zw.co.donnclab.rct.android"
     compileSdk = 36
-    defaultConfig { minSdk = 26 }
+    defaultConfig {
+        minSdk = 26
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -20,10 +23,13 @@ dependencies {
     // Keep the AAR identical whether built from a checkout or the binary starter bundle.
     // Hosts provide the core JAR; it must never be embedded a second time in this adapter.
     val engine: Any = if (findProject(":core") != null) project(":core")
-        else files(rootProject.file("../../lib/receiptscript-core-0.3.0.jar"))
+        else files(rootProject.file("../../lib/receiptscript-core-${project.version}.jar"))
     compileOnly(engine)
     testImplementation(engine)
+    androidTestImplementation(engine)
     implementation("com.google.zxing:core:3.5.3")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.robolectric:robolectric:4.14.1")
+    androidTestImplementation("androidx.test.ext:junit:1.3.0")
+    androidTestImplementation("androidx.test:runner:1.7.0")
 }

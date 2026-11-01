@@ -41,6 +41,12 @@ data class RasterOptions(
 class RasterReceipt internal constructor(val width: Int, bands: List<Bitmap>) {
     val bands: List<Bitmap> = bands.toList()
     val height: Int = bands.sumOf { it.height }
+
+    fun toBitmap(): Bitmap = ReceiptExporter.toBitmap(this)
+    fun toImageBytes(format: ReceiptImageFormat = ReceiptImageFormat.PNG, quality: Int = 100): ReceiptFile =
+        ReceiptExporter.toImageBytes(this, format, quality)
+    fun toPdfBytes(options: ReceiptPdfOptions = ReceiptPdfOptions()): ReceiptFile =
+        ReceiptExporter.toPdfBytes(this, options)
 }
 
 /**

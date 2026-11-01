@@ -13,3 +13,5 @@ if (file("../../core/build.gradle.kts").isFile) {
 }
 include(":drivers:android")
 project(":drivers:android").projectDir = file("../../drivers/android")
+include(":ui:compose")
+project(":ui:compose").projectDir = file("../../ui/compose")

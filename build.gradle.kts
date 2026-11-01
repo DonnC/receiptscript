@@ -3,7 +3,7 @@ plugins {
 }
 allprojects {
     group = "io.github.donnclab.receiptscript"
-    version = "0.3.0"
+    version = rootProject.file("VERSION").readText().trim()
 }
 
 tasks.register<Exec>("releaseBundle") {

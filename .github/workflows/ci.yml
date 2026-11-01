@@ -53,7 +53,7 @@ jobs:
           log-accepted-android-sdk-licenses: false
       - run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
       - uses: gradle/actions/setup-gradle@v4
-      - run: bash gradlew :drivers:android:testDebugUnitTest :drivers:android:assembleRelease :app:testDebugUnitTest :app:assembleDebug
+      - run: bash gradlew :drivers:android:testDebugUnitTest :drivers:android:assembleRelease :drivers:android:assembleDebugAndroidTest :ui:compose:assembleRelease :ui:compose:assembleDebugAndroidTest :app:testDebugUnitTest :app:assembleDebug
         working-directory: examples/compose-app
       - uses: actions/upload-artifact@v4
         with:
@@ -61,3 +61,4 @@ jobs:
           path: |
             examples/compose-app/app/build/outputs/apk/debug/*.apk
             drivers/android/build/outputs/aar/*.aar
+            ui/compose/build/outputs/aar/*.aar

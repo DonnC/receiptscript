@@ -4,6 +4,17 @@ import {existsSync, readFileSync} from "node:fs";
 import {fileURLToPath} from "node:url";
 
 const root = fileURLToPath(new URL("../../", import.meta.url));
+test("all distributions share the canonical semantic version", () => {
+  const version = readFileSync(root + "VERSION", "utf8").trim();
+  assert.match(version, /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/);
+  for (const path of ["tools/package.json", "tools/web/package.json", "tools/vscode-extension/package.json"]) {
+    assert.equal(JSON.parse(readFileSync(root + path, "utf8")).version, version, path);
+  }
+  const lock = JSON.parse(readFileSync(root + "tools/package-lock.json", "utf8"));
+  for (const path of ["", "web", "vscode-extension"]) assert.equal(lock.packages[path].version, version, path);
+  assert.match(readFileSync(root + "build.gradle.kts", "utf8"), /file\("VERSION"\)/);
+  assert.match(readFileSync(root + "examples/compose-app/build.gradle.kts", "utf8"), /file\("\.\.\/\.\.\/VERSION"\)/);
+});
 test("Kotlin is the primary module and authoring dependencies stay under tools", () => {
   for (const path of ["core/build.gradle.kts", "tools/package.json", "tools/web/package.json", "tools/vscode-extension/package.json"]) {
     assert.ok(existsSync(root + path), path);

@@ -50,13 +50,14 @@ jobs:
           log-accepted-android-sdk-licenses: false
       - run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
       - uses: gradle/actions/setup-gradle@v4
-      - run: bash gradlew :drivers:android:testDebugUnitTest :drivers:android:assembleRelease :app:testDebugUnitTest :app:assembleDebug
+      - run: bash gradlew :drivers:android:testDebugUnitTest :drivers:android:assembleRelease :drivers:android:assembleDebugAndroidTest :ui:compose:assembleRelease :ui:compose:assembleDebugAndroidTest :app:testDebugUnitTest :app:assembleDebug
         working-directory: examples/compose-app
       - name: Name Android distribution files
         run: |
           version=$(node -p "require('./tools/package.json').version")
           mkdir -p artifacts
           cp drivers/android/build/outputs/aar/android-release.aar "artifacts/receiptscript-android-$version.aar"
+          cp ui/compose/build/outputs/aar/compose-release.aar "artifacts/receiptscript-compose-$version.aar"
           cp examples/compose-app/app/build/outputs/apk/debug/app-debug.apk "artifacts/receiptscript-starter-$version.apk"
       - uses: actions/upload-artifact@v4
         with:

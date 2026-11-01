@@ -10,10 +10,11 @@ import {packagedReadme} from "./prepare-package-readmes.mjs";
 import {repositoryRoot as root} from "./paths.mjs";
 process.chdir(root);
 const {version} = JSON.parse(await readFile("tools/package.json", "utf8"));
+const canonicalVersion = (await readFile("VERSION", "utf8")).trim();
 const lock = JSON.parse(await readFile("tools/scripts/kotlin-toolchain.lock.json", "utf8"));
 const gradle = await readFile("build.gradle.kts", "utf8");
-if (!gradle.includes(`version = "${version}"`) || !gradle.includes(`kotlin("jvm") version "${lock.kotlin}"`)) {
-  throw new Error("Keep tools/package.json, build.gradle.kts and the Kotlin toolchain lock versions aligned.");
+if (version !== canonicalVersion || !gradle.includes(`kotlin("jvm") version "${lock.kotlin}"`)) {
+  throw new Error("Keep VERSION, package versions and the Kotlin toolchain lock aligned.");
 }
 if (process.env.GITHUB_REF?.startsWith("refs/tags/") && process.env.GITHUB_REF !== `refs/tags/v${version}`) {
   throw new Error(`The release tag must match the package version: v${version}`);
@@ -143,7 +144,7 @@ const consumer = join(work, "consumer");
 await compile(["tools/test/release", "examples/readme"], consumer, [coreJar, driverJar, stdlib, zxing], "release_consumer");
 run(["-cp", [consumer, coreJar, driverJar, stdlib, zxing].join(delimiter), "receiptscript.releasecheck.ConsumerKt", resolve("examples/readme/sale.rct")]);
 
-for (const name of ["LICENSE", "THIRD_PARTY_NOTICES.md"]) await copyFile(name, join(stage, name));
+for (const name of ["VERSION", "LICENSE", "THIRD_PARTY_NOTICES.md"]) await copyFile(name, join(stage, name));
 await mkdir(join(stage, "licenses"), {recursive: true});
 await copyFile("docs/licenses/Apache-2.0.txt", join(stage, "licenses", "Apache-2.0.txt"));
 await writeFile(join(stage, "README.md"), packagedReadme);
@@ -154,7 +155,7 @@ for (const file of await files("examples")) {
   await copyFile(file, target);
 }
 // The Android starter's optional renderer is built from source in the binary distribution.
-for (const file of await files("drivers/android")) {
+for (const file of [...await files("drivers/android"), ...await files("ui/compose")]) {
   const target = join(stage, file);
   await mkdir(dirname(target), {recursive: true});
   await copyFile(file, target);
