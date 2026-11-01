@@ -1,0 +1,5 @@
+receipt "sale"
+use header "merchant"
+use footer "customer"
+body:
+  kv "REFERENCE" "{{reference}}"

@@ -1,0 +1,2 @@
+image "asset:logos/merchant.png" 64 64
+center bold "{{merchant}}"

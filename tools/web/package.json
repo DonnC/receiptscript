@@ -1,23 +1,42 @@
 {
   "name": "@receiptscript/core",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Vendor-neutral receipt templates, typed documents, adapters, and offline previews.",
   "type": "module",
   "main": "./src/index.js",
   "exports": {
-    ".": {"types": "./src/index.d.ts", "import": "./src/index.js"},
-    "./html": {"types": "./src/html.d.ts", "import": "./src/html.js"},
-    "./text": {"types": "./src/text.d.ts", "import": "./src/text.js"}
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./src/index.js"
+    },
+    "./html": {
+      "types": "./src/html.d.ts",
+      "import": "./src/html.js"
+    },
+    "./text": {
+      "types": "./src/text.d.ts",
+      "import": "./src/text.js"
+    }
   },
   "files": [
-    "src/**", "LICENSE", "README.md"
+    "src/**",
+    "LICENSE",
+    "README.md"
   ],
   "scripts": {
     "test": "node --test test/*.test.js",
     "prepack": "node ../scripts/prepare-package-readmes.mjs"
   },
   "license": "MIT",
-  "engines": {"node": ">=22"},
-  "repository": {"type": "git", "url": "https://github.com/DonnC/receiptscript.git", "directory": "tools/web"},
-  "dependencies": {"bwip-js": "^4.7.0"}
+  "engines": {
+    "node": ">=22"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/DonnC/receiptscript.git",
+    "directory": "tools/web"
+  },
+  "dependencies": {
+    "bwip-js": "^4.7.0"
+  }
 }

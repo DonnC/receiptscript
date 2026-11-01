@@ -13,7 +13,7 @@ const {version} = JSON.parse(await readFile("tools/package.json", "utf8"));
 const canonicalVersion = (await readFile("VERSION", "utf8")).trim();
 const lock = JSON.parse(await readFile("tools/scripts/kotlin-toolchain.lock.json", "utf8"));
 const gradle = await readFile("build.gradle.kts", "utf8");
-if (version !== canonicalVersion || !gradle.includes(`kotlin("jvm") version "${lock.kotlin}"`)) {
+if (version !== canonicalVersion || !gradle.includes(`kotlin("android") version "${lock.kotlin}"`)) {
   throw new Error("Keep VERSION, package versions and the Kotlin toolchain lock aligned.");
 }
 if (process.env.GITHUB_REF?.startsWith("refs/tags/") && process.env.GITHUB_REF !== `refs/tags/v${version}`) {
@@ -87,15 +87,13 @@ async function compile(directories, destination, classpath, module) {
 }
 
 const coreClasses = join(work, "core");
-const driverClasses = join(work, "escpos");
 const testClasses = join(work, "tests");
-await compile(["core/src/main/kotlin"], coreClasses, [stdlib, annotations], "receiptscript_core");
-await compile(["drivers/escpos/src/main/kotlin"], driverClasses, [coreClasses, stdlib, annotations, zxing], "receiptscript_escpos");
-const testPath = [coreClasses, driverClasses, stdlib, annotations, zxing, jars.get("junit"), jars.get("hamcrest-core")];
-await compile(["core/src/test/kotlin", "drivers/escpos/src/test/kotlin", "examples/kotlin", "examples/kotlin-drivers"],
+await compile(["src/main/kotlin"], coreClasses, [stdlib, annotations, zxing], "receiptscript");
+const testPath = [coreClasses, stdlib, annotations, zxing, jars.get("junit"), jars.get("hamcrest-core")];
+await compile(["src/test/kotlin"],
   testClasses, testPath, "receiptscript_tests");
 const testNames = [];
-for (const file of [...await files("core/src/test/kotlin"), ...await files("drivers/escpos/src/test/kotlin")].filter(file => file.endsWith("Test.kt"))) {
+for (const file of (await files("src/test/kotlin")).filter(file => file.endsWith("Test.kt"))) {
   const source = await readFile(file, "utf8");
   const packageName = /^package\s+(\S+)/m.exec(source)[1];
   const name = /([^/\\]+)\.kt$/.exec(file)[1];
@@ -108,8 +106,7 @@ await mkdir(join(stage, "lib"), {recursive: true});
 await mkdir(join(stage, "optional"), {recursive: true});
 await mkdir(join(stage, "runtime-jvm"), {recursive: true});
 await mkdir(join(stage, "sources"), {recursive: true});
-const coreJar = join(stage, "lib", `receiptscript-core-${version}.jar`);
-const driverJar = join(stage, "lib", `receiptscript-escpos-${version}.jar`);
+const coreJar = join(stage, "lib", `receiptscript-${version}.jar`);
 const mtime = new Date("2020-01-01T00:00:00Z");
 async function zip(destination, entries) {
   await mkdir(dirname(destination), {recursive: true});
@@ -133,32 +130,29 @@ async function jar(directory, target, prefix = "") {
   await zip(target, entries);
 }
 await jar(coreClasses, coreJar);
-await jar(driverClasses, driverJar);
-await jar("core/src/main/kotlin", join(stage, "sources", `receiptscript-core-${version}-sources.jar`));
-await jar("drivers/escpos/src/main/kotlin", join(stage, "sources", `receiptscript-escpos-${version}-sources.jar`));
+await jar("src/main/kotlin", join(stage, "sources", `receiptscript-${version}-sources.jar`));
 await copyFile(zxing, join(stage, "optional", "zxing-core-3.5.3.jar"));
 await copyFile(stdlib, join(stage, "runtime-jvm", `kotlin-stdlib-${lock.kotlin}.jar`));
 
 // Prove the published surface works using only the assembled JARs and their runtime dependencies.
 const consumer = join(work, "consumer");
-await compile(["tools/test/release", "examples/readme"], consumer, [coreJar, driverJar, stdlib, zxing], "release_consumer");
-run(["-cp", [consumer, coreJar, driverJar, stdlib, zxing].join(delimiter), "receiptscript.releasecheck.ConsumerKt", resolve("examples/readme/sale.rct")]);
+await compile(["tools/test/release", "src/test/fixtures/readme"], consumer, [coreJar, stdlib, zxing], "release_consumer");
+run(["-cp", [consumer, coreJar, stdlib, zxing].join(delimiter), "receiptscript.releasecheck.ConsumerKt", resolve("example/src/main/assets/templates/readme/sale.rct")]);
 
 for (const name of ["VERSION", "LICENSE", "THIRD_PARTY_NOTICES.md"]) await copyFile(name, join(stage, name));
 await mkdir(join(stage, "licenses"), {recursive: true});
 await copyFile("docs/licenses/Apache-2.0.txt", join(stage, "licenses", "Apache-2.0.txt"));
 await writeFile(join(stage, "README.md"), packagedReadme);
-await mkdir(join(stage, "examples"), {recursive: true});
-for (const file of await files("examples")) {
-  const target = join(stage, file);
-  await mkdir(dirname(target), {recursive: true});
-  await copyFile(file, target);
+// A binary download also contains the buildable Android library and one example application.
+for (const directory of ["src", "example", "gradle"]) {
+  for (const file of await files(directory)) {
+    const target = join(stage, file);
+    await mkdir(dirname(target), {recursive: true});
+    await copyFile(file, target);
+  }
 }
-// The Android starter's optional renderer is built from source in the binary distribution.
-for (const file of [...await files("drivers/android"), ...await files("ui/compose")]) {
-  const target = join(stage, file);
-  await mkdir(dirname(target), {recursive: true});
-  await copyFile(file, target);
+for (const file of ["build.gradle.kts", "settings.gradle.kts", "gradle.properties", "gradlew", "gradlew.bat"]) {
+  await copyFile(file, join(stage, file));
 }
 await writeFile(join(stage, "release.json"), JSON.stringify({version, kotlin: lock.kotlin, jvmTarget: 11,
   runtimeDependencies: [{name: "kotlin-stdlib", version: lock.kotlin}, {name: "zxing-core", version: "3.5.3", optional: true}],
@@ -168,6 +162,6 @@ for (const file of await files(stage)) checksums.push(`${hash(await readFile(fil
 await writeFile(join(stage, "SHA256SUMS"), checksums.join("\n") + "\n");
 const archivePath = join(artifacts, `receiptscript-${version}-binary.zip`);
 await zip(archivePath, await Promise.all((await files(stage)).map(async file => ({name: `receiptscript-${version}/${file.slice(stage.length + 1)}`, bytes: await readFile(file)}))));
-for (const file of [coreJar, driverJar]) await copyFile(file, join(artifacts, file.split(/[\\/]/).at(-1)));
+for (const file of [coreJar]) await copyFile(file, join(artifacts, file.split(/[\\/]/).at(-1)));
 await writeFile(`${archivePath}.sha256`, `${hash(await readFile(archivePath))}  receiptscript-${version}-binary.zip\n`);
 console.log(`Verified binary release: ${archivePath} (${(await stat(archivePath)).size} bytes)`);

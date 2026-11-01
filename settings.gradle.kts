@@ -1,7 +1,4 @@
-pluginManagement { repositories { gradlePluginPortal(); mavenCentral(); google() } }
-dependencyResolutionManagement { repositories { mavenCentral(); google() } }
+pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
+dependencyResolutionManagement { repositories { google(); mavenCentral() } }
 rootProject.name = "receiptscript"
-include(":core")
-include(":drivers:escpos")
-
-// Optional Android output and Compose UI are built through examples/compose-app; this build stays JVM-only.
+include(":example")

@@ -1,9 +1,12 @@
 {
   "name": "receiptscript-workspace",
   "private": true,
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "ReceiptScript engine and authoring tools",
-  "workspaces": ["web", "vscode-extension"],
+  "workspaces": [
+    "web",
+    "vscode-extension"
+  ],
   "scripts": {
     "version:sync": "node scripts/sync-version.mjs",
     "version:check": "node scripts/sync-version.mjs --check",
@@ -24,6 +27,8 @@
     "yazl": "^3.3.1",
     "typescript": "^5.9.0"
   },
-  "engines": {"node": ">=22"},
+  "engines": {
+    "node": ">=22"
+  },
   "license": "MIT"
 }

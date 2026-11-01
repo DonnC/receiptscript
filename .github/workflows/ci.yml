@@ -38,7 +38,11 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v4
-      - run: bash gradlew :core:test :drivers:escpos:test :core:publishToMavenLocal :drivers:escpos:publishToMavenLocal
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm --prefix tools ci
+      - run: npm --prefix tools run release:kotlin
   android-starter:
     runs-on: ubuntu-latest
     steps:
@@ -53,12 +57,10 @@ jobs:
           log-accepted-android-sdk-licenses: false
       - run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
       - uses: gradle/actions/setup-gradle@v4
-      - run: bash gradlew :drivers:android:testDebugUnitTest :drivers:android:assembleRelease :drivers:android:assembleDebugAndroidTest :ui:compose:assembleRelease :ui:compose:assembleDebugAndroidTest :app:testDebugUnitTest :app:assembleDebug
-        working-directory: examples/compose-app
+      - run: bash gradlew :testDebugUnitTest :assembleRelease :assembleDebugAndroidTest :generatePomFileForReceiptScriptPublication :example:testDebugUnitTest :example:assembleDebug
       - uses: actions/upload-artifact@v4
         with:
           name: receiptscript-android-starter
           path: |
-            examples/compose-app/app/build/outputs/apk/debug/*.apk
-            drivers/android/build/outputs/aar/*.aar
-            ui/compose/build/outputs/aar/*.aar
+            example/build/outputs/apk/debug/*.apk
+            build/outputs/aar/*.aar

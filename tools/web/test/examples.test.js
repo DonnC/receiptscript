@@ -20,4 +20,4 @@ function visit(directory) {
     }
   }
 }
-visit(new URL("../../../examples/", import.meta.url));
+visit(new URL("../../../example/src/main/assets/", import.meta.url));
