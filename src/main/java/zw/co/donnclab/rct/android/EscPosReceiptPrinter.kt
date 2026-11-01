@@ -13,11 +13,11 @@ import zw.co.donnclab.rct.escpos.PrinterConnection
 class EscPosReceiptPrinter(
     private val connection: PrinterConnection,
     private val profile: EscPosProfile = EscPosProfile.Portable58
-) : ReceiptPrinter {
+) : ReceiptDriver {
     private val mutex = Mutex()
     private val driver = EscPosDriver(profile)
 
-    override suspend fun print(receipt: RasterReceipt) = withContext(Dispatchers.IO) {
+    override suspend fun print(receipt: Receipt) = withContext(Dispatchers.IO) {
         mutex.withLock {
             require(receipt.width == profile.printableWidthDots) { "Receipt width must match the printer" }
             val bands = receipt.bands.map { bitmap ->

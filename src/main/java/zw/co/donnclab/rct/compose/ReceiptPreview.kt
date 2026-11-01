@@ -21,14 +21,14 @@ import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import zw.co.donnclab.rct.Receipt
+import zw.co.donnclab.rct.Receipt as ReceiptDocument
 import zw.co.donnclab.rct.android.AndroidReceiptRenderer
-import zw.co.donnclab.rct.android.RasterReceipt
+import zw.co.donnclab.rct.android.Receipt
 
 /** A printer-independent preview using the renderer's bundled monospace font, in source-dot proportions. */
 @Composable
 fun ReceiptPreview(
-    receipt: Receipt,
+    receipt: ReceiptDocument,
     modifier: Modifier = Modifier,
     renderer: AndroidReceiptRenderer? = null,
     onError: (Throwable) -> Unit = {}
@@ -38,7 +38,7 @@ fun ReceiptPreview(
     val result = if (LocalInspectionMode.current) {
         remember(receipt, outputRenderer) { runCatching { outputRenderer.render(receipt) } }
     } else {
-        val state by produceState<Result<RasterReceipt>?>(null, receipt, outputRenderer) {
+        val state by produceState<Result<Receipt>?>(null, receipt, outputRenderer) {
             value = withContext(Dispatchers.IO) {
                 try { Result.success(outputRenderer.render(receipt)) }
                 catch (cancelled: CancellationException) { throw cancelled }
@@ -55,9 +55,9 @@ fun ReceiptPreview(
     }
 }
 
-/** Pass the same RasterReceipt to preview, exporter and printer when exact output matching matters. */
+/** Pass the receipt returned by ReceiptScript.render directly to the UI. No printer is needed. */
 @Composable
-fun ReceiptPreview(receipt: RasterReceipt, modifier: Modifier = Modifier) {
+fun ReceiptUiPreview(receipt: Receipt, modifier: Modifier = Modifier) {
     Column(modifier) {
         receipt.bands.forEachIndexed { index, bitmap ->
             Image(
@@ -70,3 +70,7 @@ fun ReceiptPreview(receipt: RasterReceipt, modifier: Modifier = Modifier) {
         }
     }
 }
+
+/** Compatibility entry point; new integrations use [ReceiptUiPreview]. */
+@Composable
+fun ReceiptPreview(receipt: Receipt, modifier: Modifier = Modifier) = ReceiptUiPreview(receipt, modifier)

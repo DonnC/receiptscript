@@ -10,7 +10,7 @@ import kotlin.math.ceil
 /** Exports an existing layout, without recalculating text, tables, fonts or code images. */
 object ReceiptExporter {
     /** Returns a caller-owned bitmap. Prefer PDF for receipts exceeding the flattening budget. */
-    fun toBitmap(receipt: RasterReceipt): Bitmap {
+    fun toBitmap(receipt: Receipt): Bitmap {
         require(receipt.width.toLong() * receipt.height <= MAX_IMAGE_PIXELS) {
             "Receipt exceeds the image export budget; export PDF instead"
         }
@@ -26,7 +26,7 @@ object ReceiptExporter {
     }
 
     fun toImageBytes(
-        receipt: RasterReceipt,
+        receipt: Receipt,
         format: ReceiptImageFormat = ReceiptImageFormat.PNG,
         quality: Int = 100
     ): ReceiptFile {
@@ -44,7 +44,7 @@ object ReceiptExporter {
     }
 
     /** Streams bands into PDF pages; a long receipt never needs a single tall bitmap. */
-    fun toPdfBytes(receipt: RasterReceipt, options: ReceiptPdfOptions = ReceiptPdfOptions()): ReceiptFile {
+    fun toPdfBytes(receipt: Receipt, options: ReceiptPdfOptions = ReceiptPdfOptions()): ReceiptFile {
         val document = PdfDocument()
         try {
             val scale = PDF_POINTS_PER_INCH / options.dotsPerInch
@@ -73,7 +73,7 @@ object ReceiptExporter {
         }
     }
 
-    internal fun pages(receipt: RasterReceipt, options: ReceiptPdfOptions): List<PdfPart> =
+    internal fun pages(receipt: Receipt, options: ReceiptPdfOptions): List<PdfPart> =
         (0 until receipt.height step options.pageHeightDots).map { offset ->
             PdfPart(offset, minOf(options.pageHeightDots, receipt.height - offset))
         }

@@ -13,6 +13,8 @@ data class SampleDocument(val receipt: Receipt, val source: String, val contextJ
 class SampleCatalog(private val readAsset: (String) -> String) {
     private val engine = ReceiptScript(loadTemplate = { id -> readAsset("receipts/$id.rct") })
 
+    fun data(document: SampleDocument): Map<String, Any?> = objectMap(JSONObject(document.contextJson))
+
     fun open(example: SampleExample): SampleDocument {
         val source = readAsset("receipts/${example.id}.rct")
         val json = readAsset("receipts/${example.id}.preview.json")

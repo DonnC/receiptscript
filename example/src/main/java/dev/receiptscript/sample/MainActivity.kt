@@ -25,7 +25,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import zw.co.donnclab.rct.android.AssetReceiptTemplateRepository
+import zw.co.donnclab.rct.android.AssetReceiptMediaResolver
+import zw.co.donnclab.rct.android.ReceiptScript
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -49,18 +50,23 @@ internal fun StarterTheme(content: @Composable () -> Unit) {
 fun ReceiptGallery(printer: SamplePrinter? = null) {
     val context = LocalContext.current
     val catalog = remember(context) { SampleCatalog { context.assets.open(it).bufferedReader().use { reader -> reader.readText() } } }
-    val templates = remember(context) { AssetReceiptTemplateRepository(context) }
+    val receipts = remember(context, printer) {
+        ReceiptScript(context, printer, images = AssetReceiptMediaResolver(context, "receipts"))
+    }
     var selected by remember { mutableStateOf<SampleExample?>(null) }
     var tab by remember { mutableIntStateOf(0) }
     var message by remember { mutableStateOf<String?>(null) }
     var printing by remember { mutableStateOf(false) }
     BackHandler(enabled = selected != null && !printing) { selected = null }
     val scope = rememberCoroutineScope()
-    val document by produceState<Result<PreviewDocument>?>(null, selected) {
+    val document by produceState<Result<PreviewDocument>?>(null, selected, receipts) {
         value = null
         selected?.let { example ->
             value = withContext(Dispatchers.IO) {
-                try { Result.success(renderPreview(context, catalog.open(example, templates))) }
+                try {
+                    val source = catalog.open(example)
+                    Result.success(PreviewDocument(source, receipts.render(example.id, catalog.data(source))))
+                }
                 catch (cancelled: CancellationException) { throw cancelled }
                 catch (failure: Exception) { Result.failure(failure) }
             }
@@ -78,7 +84,7 @@ fun ReceiptGallery(printer: SamplePrinter? = null) {
                 else scope.launch {
                     printing = true
                     try {
-                        printer.print(preview.raster)
+                        receipts.print(preview.receipt)
                         message = "Printer job completed. Confirm the physical output on your device."
                     } catch (cancelled: CancellationException) { throw cancelled }
                     catch (failure: Exception) { message = "Print failed: ${failure.message}. Output may be partial; check before retrying." }
@@ -152,7 +158,7 @@ fun ReceiptGalleryScreen(
                             Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp)) {
                                 if (tab == 0) {
                                     Box(Modifier.widthIn(max = 520.dp).fillMaxWidth().align(androidx.compose.ui.Alignment.CenterHorizontally)) {
-                                        ReceiptPreview(requireNotNull(previewDocument).raster)
+                                        ReceiptPreview(requireNotNull(previewDocument).receipt)
                                     }
                                 } else CodePanel(
                                     source = if (tab == 1) receiptDocument.source else receiptDocument.contextJson,

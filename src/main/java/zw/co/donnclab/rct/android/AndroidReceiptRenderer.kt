@@ -15,11 +15,12 @@ import com.google.zxing.BarcodeFormat as ZxingFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.MultiFormatWriter
 import zw.co.donnclab.rct.*
+import zw.co.donnclab.rct.Receipt as ReceiptDocument
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 
 /** Pixel geometry belongs to the output adapter, not the template or the Android display density. */
-data class RasterOptions(
+data class ReceiptOptions(
     val width: Int = 384,
     val padding: Int = 16,
     val fontSize: Float = 24f,
@@ -36,21 +37,6 @@ data class RasterOptions(
     }
 }
 
-/** Immutable monochrome bands in printer dots. Preview and print must use this same result.
- * Do not recycle a band while a preview or print job is using it. No device handles are retained.
- */
-class RasterReceipt internal constructor(val width: Int, bands: List<Bitmap>) {
-    val bands: List<Bitmap> = bands.toList()
-    val height: Int = bands.sumOf { it.height }
-    suspend fun print(printer: ReceiptPrinter) = printer.print(this)
-
-    fun toBitmap(): Bitmap = ReceiptExporter.toBitmap(this)
-    fun toImageBytes(format: ReceiptImageFormat = ReceiptImageFormat.PNG, quality: Int = 100): ReceiptFile =
-        ReceiptExporter.toImageBytes(this, format, quality)
-    fun toPdfBytes(options: ReceiptPdfOptions = ReceiptPdfOptions()): ReceiptFile =
-        ReceiptExporter.toPdfBytes(this, options)
-}
-
 /**
  * Lays out a resolved Receipt once, then draws it into bounded raster bands. This adapter does not
  * depend on Compose, a printer SDK, Bluetooth or network access. Image ownership stays with the
@@ -58,17 +44,17 @@ class RasterReceipt internal constructor(val width: Int, bands: List<Bitmap>) {
  */
 class AndroidReceiptRenderer(
     context: Context,
-    private val options: RasterOptions = RasterOptions(),
+    private val options: ReceiptOptions = ReceiptOptions(),
     private val images: ReceiptMediaResolver<Bitmap> = AssetReceiptMediaResolver(context),
     typeface: Typeface? = null
-) : ReceiptAdapter<RasterReceipt> {
+) : ReceiptAdapter<Receipt> {
     private val face = typeface ?: context.resources.getFont(R.font.receipt_mono)
 
-    override fun render(receipt: Receipt): RasterReceipt = Job(receipt).render()
+    override fun render(receipt: ReceiptDocument): Receipt = Job(receipt).render()
 
     private data class Mark(val top: Int, val bottom: Int, val draw: (Canvas) -> Unit)
 
-    private inner class Job(private val receipt: Receipt) {
+    private inner class Job(private val receipt: ReceiptDocument) {
         private val marks = mutableListOf<Mark>()
         private val contentWidth = options.width - options.padding * 2
         private var y = options.padding
@@ -189,7 +175,7 @@ class AndroidReceiptRenderer(
             image(bitmap, bitmap.width, bitmap.height)
         }
 
-        fun render(): RasterReceipt {
+        fun render(): Receipt {
             val requestedWidth = receipt.meta?.width
             require(requestedWidth == null || requestedWidth > 0) { "Receipt width must be positive" }
             receipt.blocks.forEach { block -> when (block) {
@@ -254,7 +240,7 @@ class AndroidReceiptRenderer(
                 bitmap.setPixels(pixels, 0, options.width, 0, 0, options.width, height)
                 requireNotNull(bitmap.copy(Bitmap.Config.ARGB_8888, false)).also { bitmap.recycle() }
             }
-            return RasterReceipt(options.width, bands)
+            return Receipt(options.width, bands, receipt.name, receipt.meta, receipt.blocks)
         }
     }
 }

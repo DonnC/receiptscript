@@ -1,7 +1,7 @@
 {
   "name": "receiptscript-workspace",
   "private": true,
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "ReceiptScript engine and authoring tools",
   "workspaces": [
     "web",

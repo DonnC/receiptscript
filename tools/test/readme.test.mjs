@@ -25,11 +25,17 @@ test("README repository-relative links resolve", () => {
   }
 });
 
-test("README includes a complete Android entry point and each printer path", () => {
+test("README shows the direct API and each printer path without application wrappers", () => {
   const kotlin = fences.filter(match => match[1] === "kotlin").map(match => match[2]).join("\n");
-  for (const name of ["loadSale", "SaleReceiptScreen", "printOnTerminal", "printToBluetooth", "printToUsbSerial"]) {
-    assert.match(kotlin, new RegExp(`fun ${name}\\(`));
-  }
+  assert.match(kotlin, /val receipts = ReceiptScript\(/);
+  assert.match(kotlin, /receipts\.render\("sale", data\)/);
+  assert.match(kotlin, /receipts\.print\(receipt\)/);
+  assert.match(kotlin, /class TerminalDriver/);
+  assert.match(kotlin, /val bluetoothDriver = EscPosReceiptPrinter/);
+  assert.match(kotlin, /val usbDriver = EscPosReceiptPrinter/);
+  assert.doesNotMatch(kotlin, /fun (createReceipts|loadSale|SaleReceiptScreen|printSale)\(/);
   assert.match(readme, /RCT: Open Preview/);
   assert.match(readme, /sale\.preview\.json/);
+  assert.match(readme, /ReceiptUiPreview\(receipt/);
+  assert.doesNotMatch(readme, /RasterReceipt/);
 });
