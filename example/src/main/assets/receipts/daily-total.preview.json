@@ -1,5 +1,5 @@
 {
-  "merchant": {"name": "MAVAMBO MARKET", "address": "Harare, Zimbabwe", "logo": "logo.png"},
+  "merchant": {"name": "MAVAMBO MARKET", "address": "Harare, Zimbabwe", "logo": "asset:logo.png"},
   "terminal": "T0000421",
   "date": "31/10/2026",
   "generated": "2026-10-31T17:10:00",

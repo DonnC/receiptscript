@@ -1,0 +1,198 @@
+package io.github.donnclab.rct
+
+import io.github.donnclab.rct.tooling.RctLintSeverity
+import io.github.donnclab.rct.tooling.RctLinter
+
+/**
+ * The platform-independent template compiler: RCT source + data in, [ReceiptDocument] out.
+ *
+ * Android apps use `ReceiptScript` instead, which wraps this compiler and also
+ * renders, previews, exports and prints. Use `RctCompiler` directly on the JVM (servers, tests, tools)
+ * or when you only need the printer-neutral blocks.
+ *
+ * Compile once and render many times: a compiled [RctTemplate] keeps no data between renders and is
+ * safe to share between threads.
+ *
+ * @param templates in-memory sources keyed by ID, used by [template] and for `use header`/`use footer`.
+ * @param loadTemplate synchronous lookup used by [template] and [compile]; defaults to [templates].
+ * @param strictBindings when true, a `{{binding}}` that resolves to null fails unless it has a
+ *   `default` filter. Turn off to render missing values as empty text.
+ */
+public class RctCompiler(
+    templates: Map<String, String> = emptyMap(),
+    private val loadTemplate: (String) -> String? = templates::get,
+    private val strictBindings: Boolean = true
+) {
+    private val parser: RctParser = DefaultRctParser()
+    private val engine: RctTemplateEngine = DefaultRctTemplateEngine()
+    private data class SourceKey(val source: String, val fragments: Map<String, String>)
+    private val prepared = linkedMapOf<SourceKey, RctTemplate>()
+
+    /** Compiles and renders [source] in one step. Fragments come from the constructor lookup. */
+    public fun render(source: String, data: Any?): ReceiptDocument = compile(source).render(data)
+
+    /**
+     * Compiles [source], loading every `use header`/`use footer` fragment from [repository].
+     * Each call re-reads fragments, so repository changes are picked up; a small cache keyed by
+     * source text avoids re-parsing. Template data is never cached.
+     */
+    public suspend fun compile(
+        source: String,
+        repository: ReceiptTemplateRepository,
+        args: Map<String, Any?> = emptyMap()
+    ): RctTemplate {
+        val document = parse(source)
+        val fragments = (document.headerReferences + document.footerReferences)
+            .map { it.id }.distinct().associateWith { repository.getTemplate(it, args) }
+        val key = SourceKey(source, fragments)
+        return synchronized(prepared) {
+            prepared[key] ?: RctTemplate { data -> render(document, data, fragments::get) }.also {
+                if (prepared.size >= 32) prepared.remove(prepared.keys.first())
+                prepared[key] = it
+            }
+        }
+    }
+
+    /** Loads template [id] and its fragments from [repository] with the same lookup [args]. */
+    public suspend fun template(
+        id: String,
+        repository: ReceiptTemplateRepository,
+        args: Map<String, Any?> = emptyMap()
+    ): RctTemplate = compile(repository.getTemplate(id, args), repository, args)
+
+    /** Compiles [source]; fragments are looked up with the constructor's `loadTemplate` at render time. */
+    public fun compile(source: String): RctTemplate {
+        val document = parse(source)
+        return RctTemplate { data -> render(document, data, loadTemplate) }
+    }
+
+    /** Compiles the template [id] from the constructor's `loadTemplate`. */
+    public fun template(id: String): RctTemplate = compile(
+        requireNotNull(loadTemplate(id)) { "Unknown template: $id" }
+    )
+
+    private fun parse(source: String): RctDocument {
+        val issues = RctLinter.lint(source).filter { it.severity == RctLintSeverity.ERROR }
+        require(issues.isEmpty()) { issues.joinToString("\n") { "Line ${it.line}: ${it.message}" } }
+        return parser.parse(source).also { validateNodes(it.header + it.body + it.footer) }
+    }
+
+    private fun render(document: RctDocument, data: Any?, fragmentSource: (String) -> String?): ReceiptDocument {
+        fun fragments(references: List<RctFragmentReference>): List<RctNode> = references.flatMap { reference ->
+            val source = requireNotNull(fragmentSource(reference.id)) { "Missing fragment: ${reference.id}" }
+            parser.parseFragment(source).also(::validateNodes)
+        }
+        val header = fragments(document.headerReferences) + document.header
+        val footer = document.footer + fragments(document.footerReferences)
+        val context = RctRenderContext(data)
+        val blocks = renderNodes(header + document.body, context, document.meta) +
+            if (footer.isEmpty()) emptyList() else listOf(ReceiptBlock.Spacer(2)) + renderNodes(footer, context, document.meta)
+        return ReceiptDocument(document.name, document.meta, blocks)
+    }
+
+    private fun text(template: RctTemplateString, context: RctRenderContext): String {
+        if (strictBindings) template.parts.filterIsInstance<RctBindingPart>().forEach { binding ->
+            require(engine.resolveValue(binding.path, context) != null || binding.filters.any { it.name == "default" }) {
+                "Missing binding: ${binding.path}"
+            }
+        }
+        return engine.render(template, context)
+    }
+
+    private fun style(meta: ReceiptMeta?, size: ReceiptFontSize = ReceiptFontSize.MIDDLE, inline: Float? = null,
+                      bold: Boolean = false, underline: Boolean = false): ReceiptTextStyle {
+        val font = inline ?: meta?.font?.let { base ->
+            if (meta.fontScaleMode == ReceiptFontScaleMode.FIXED) base else when (size) {
+                ReceiptFontSize.SMALL -> (base - 3).coerceAtLeast(1f)
+                ReceiptFontSize.BIG -> base + 3
+                ReceiptFontSize.MIDDLE -> base
+            }
+        }
+        return ReceiptTextStyle(size, font, bold, underline)
+    }
+
+    private fun renderNodes(nodes: List<RctNode>, context: RctRenderContext, meta: ReceiptMeta?): List<ReceiptBlock> =
+        nodes.flatMap { node -> when (node) {
+            is RctTextNode -> listOf(ReceiptBlock.Text(text(node.text, context), node.align,
+                style(meta, node.fontSize, node.customFontSize, node.bold, node.underline)))
+            is RctKeyValueNode -> listOf(ReceiptBlock.KeyValue(text(node.key, context), text(node.value, context),
+                style(meta, node.fontSize, node.customFontSize, node.bold, node.underline)))
+            is RctDividerNode -> listOf(ReceiptBlock.Divider(node.pattern, node.length ?: meta?.width ?: 34))
+            is RctSpacerNode -> listOf(ReceiptBlock.Spacer(node.lines))
+            is RctRowNode -> listOf(ReceiptBlock.Row(node.columns.map { text(it, context) }))
+            is RctImageNode -> listOf(ReceiptBlock.Image(text(node.source, context), node.width, node.height))
+            is RctQrNode -> listOf(ReceiptBlock.QrCode(text(node.content, context), node.size))
+            is RctBarcodeNode -> listOf(ReceiptBlock.Barcode(text(node.content, context), node.width, node.height, node.format))
+            is RctIfNode -> if (engine.isTruthy(node.path, context)) renderNodes(node.children, context, meta) else emptyList()
+            is RctForEachNode -> contexts(node, context).flatMap { renderNodes(node.children, it, meta) }
+            is RctTableNode -> {
+                val headers = node.headers.map { text(it, context) }
+                val rows = tableRows(node.children, context)
+                val count = headers.size.takeIf { it > 0 } ?: rows.firstOrNull()?.size ?: 0
+                require(rows.all { it.size == count } && (node.columnWeights == null || node.columnWeights.size == count) &&
+                    (node.columnAlignments == null || node.columnAlignments.size == count)) { "Table columns must match" }
+                listOf(ReceiptBlock.Table(headers, rows, node.columnWeights, node.columnAlignments,
+                    style(meta, ReceiptFontSize.SMALL, bold = true), style(meta, ReceiptFontSize.SMALL)))
+            }
+        } }
+
+    private fun tableRows(nodes: List<RctNode>, context: RctRenderContext): List<List<String>> = nodes.flatMap { node ->
+        when (node) {
+            is RctRowNode -> listOf(node.columns.map { text(it, context) })
+            is RctIfNode -> if (engine.isTruthy(node.path, context)) tableRows(node.children, context) else emptyList()
+            is RctForEachNode -> contexts(node, context).flatMap { tableRows(node.children, it) }
+            else -> throw IllegalArgumentException("Tables only support rows, if and for blocks")
+        }
+    }
+
+    private fun contexts(node: RctForEachNode, context: RctRenderContext): List<RctRenderContext> {
+        val value = engine.resolveValue(node.collectionPath, context)
+        val items = when (value) {
+            null -> emptyList()
+            is Iterable<*> -> value.toList()
+            is Array<*> -> value.toList()
+            else -> throw IllegalArgumentException("Collection required: ${node.collectionPath}")
+        }
+        return items.mapIndexed { index, item -> context.copy(locals = context.locals + mapOf(
+            node.itemName to item, "@item" to item, "@index" to index, "@first" to (index == 0),
+            "@last" to (index == items.lastIndex), "@count" to items.size
+        )) }
+    }
+
+    private fun validateNodes(nodes: List<RctNode>) {
+        val filters = setOf("upper", "lower", "default", "maskPan", "mask", "money", "date", "datetime", "padLeft", "padRight", "padCenter")
+        nodes.forEach { node ->
+            val templates = when (node) {
+                is RctTextNode -> listOf(node.text)
+                is RctKeyValueNode -> listOf(node.key, node.value)
+                is RctRowNode -> node.columns
+                is RctTableNode -> node.headers
+                is RctImageNode -> listOf(node.source)
+                is RctQrNode -> listOf(node.content)
+                is RctBarcodeNode -> listOf(node.content)
+                else -> emptyList()
+            }
+            templates.flatMap { it.parts }.filterIsInstance<RctBindingPart>().flatMap { it.filters }.forEach {
+                require(it.name in filters) { "Unknown filter: ${it.name}" }
+            }
+            when (node) {
+                is RctTableNode -> {
+                    require(node.columnWeights?.all { it.isFinite() && it > 0 } != false) { "Table weights must be positive" }
+                    validateNodes(node.children)
+                }
+                is RctIfNode -> validateNodes(node.children)
+                is RctForEachNode -> validateNodes(node.children)
+                is RctQrNode -> require(node.size > 0) { "QR size must be positive" }
+                is RctBarcodeNode -> require(node.width > 0 && node.height > 0) { "Barcode dimensions must be positive" }
+                is RctImageNode -> require((node.width ?: 1) > 0 && (node.height ?: 1) > 0) { "Image dimensions must be positive" }
+                else -> Unit
+            }
+        }
+    }
+}
+
+/** A compiled template. Rendering binds data without any further I/O. */
+public class RctTemplate internal constructor(private val renderDocument: (Any?) -> ReceiptDocument) {
+    /** Binds [data] (a `Map`, a Kotlin/Java object, or null) and returns the resulting blocks. */
+    public fun render(data: Any?): ReceiptDocument = renderDocument(data)
+}

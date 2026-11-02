@@ -1,0 +1,23 @@
+# Weekly dependency updates. Group minor and patch bumps so they arrive as one pull request per ecosystem.
+version: 2
+updates:
+  - package-ecosystem: gradle
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      gradle-minor:
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /tools
+    schedule:
+      interval: weekly
+    groups:
+      npm-minor:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

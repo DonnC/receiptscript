@@ -1,6 +1,6 @@
 {
   "name": "@receiptscript/core",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Vendor-neutral receipt templates, typed documents, adapters, and offline previews.",
   "type": "module",
   "main": "./src/index.js",

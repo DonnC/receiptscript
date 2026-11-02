@@ -2,7 +2,7 @@
   "merchant": {
     "name": "MAVAMBO MARKET",
     "address": "12 Samora Machel Ave, Harare",
-    "logo": "logo.png"
+    "logo": "asset:logo.png"
   },
   "txn": {
     "date": "2026-10-30T14:25:36"

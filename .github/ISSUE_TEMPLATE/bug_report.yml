@@ -1,0 +1,65 @@
+name: Bug report
+description: A template, render, preview, export or print that behaves incorrectly
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Use **fictional data only**: never paste real card numbers, customer
+        details or production receipts. Security issues go to [SECURITY.md](https://github.com/DonnC/receiptscript/security/policy), not here.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: template
+    attributes:
+      label: Minimal template
+      description: The smallest `.rct` source that shows the problem.
+      render: rct
+  - type: textarea
+    id: data
+    attributes:
+      label: Sample data
+      description: The data you rendered with, as JSON or Kotlin.
+      render: json
+  - type: textarea
+    id: code
+    attributes:
+      label: Kotlin code
+      description: How you create `ReceiptScript`, render and print. Include your driver if it is involved.
+      render: kotlin
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Template language / binding
+        - Android rendering or Compose preview
+        - Image or PDF export
+        - ESC/POS printing
+        - Custom driver
+        - VS Code extension
+        - JVM engine
+        - Documentation
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: ReceiptScript version
+      placeholder: "0.7.0"
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Device, Android version and printer
+      description: For printing issues, include the printer model, paper width and connection (Bluetooth, USB, TCP).
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error message or stack trace
+      render: text

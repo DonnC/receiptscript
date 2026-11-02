@@ -2,25 +2,30 @@
 
 # ReceiptScript
 
-**Design receipts once. Preview, print, and share them from Kotlin.**
+[![Verify](https://github.com/DonnC/receiptscript/actions/workflows/ci.yml/badge.svg)](https://github.com/DonnC/receiptscript/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/DonnC/receiptscript?include_prereleases)](https://github.com/DonnC/receiptscript/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-ReceiptScript turns readable `.rct` templates and your application data into a
-`Receipt`. Configure your printer and sources once; use the same receipt for
-Compose preview, printing, and image/PDF export. One Android AAR includes the
-engine, preview, exporters, and ESC/POS support.
+**Thermal receipts for Android POS apps, written as templates, printed on any printer.**
 
-[Example app](example) · [Templates](example/src/main/assets/receipts) ·
-[Downloads](https://github.com/DonnC/receiptscript/releases) · [MIT](LICENSE)
+You write receipts as small `.rct` templates. ReceiptScript binds your data, lays the receipt
+out, previews it in Compose, exports it as an image or PDF, and hands it to your printer. Your
+code covers only what is specific to your app: your printer SDK, and, if you need them, where
+templates and images come from.
 
-![ReceiptScript template and its rendered receipt](docs/media/receipt-example.png)
+![A ReceiptScript template and the receipt it renders](docs/media/receipt-example.png)
+
+> **Status:** pre-1.0. The API may change between minor versions; every change is listed in the
+> [changelog](CHANGELOG.md) with a migration note.
 
 ## Install
 
-Place the AAR in your Compose app's `app/libs/` directory:
+Download `receiptscript-<version>.aar` from [Releases](https://github.com/DonnC/receiptscript/releases),
+put it in `app/libs/`, and add:
 
 ```kotlin
 dependencies {
-    implementation(files("libs/receiptscript-0.6.0.aar"))
+    implementation(files("libs/receiptscript-0.7.0.aar"))
     implementation(platform("androidx.compose:compose-bom:2025.11.01"))
     implementation("androidx.compose.foundation:foundation")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
@@ -28,21 +33,17 @@ dependencies {
 }
 ```
 
-Requires Android API 26+ and Java 11 bytecode support; built with Kotlin 2.3.20.
-The dependencies above accompany a local AAR. For the current **0.6.0 development
-version**, build with `./gradlew :assembleRelease` using JDK 17 and Android SDK 36.
-The AAR is written to `build/outputs/aar/`; published versions go to GitHub Releases.
+Requires Android 8.0 (API 26) or newer and Java 11 bytecode.
 
-## Design
+## Quick start
 
-Create `app/src/main/assets/receipts/sale.rct`:
+**1. Write a template.** Save it as `app/src/main/assets/receipts/sale.rct`:
 
 ```rct
 receipt "sale"
 
 center bold "{{merchant}}"
 kv "REFERENCE" "{{reference}}"
-
 divider
 table:
   headers: "ITEM" "QTY" "TOTAL"
@@ -50,7 +51,6 @@ table:
   alignments: start center end
   for item in items:
     row "{{item.name}}" "{{item.quantity}}" "{{item.total | money:currency}}"
-
 divider
 kv bold "TOTAL" "{{total | money:currency}}"
 barcode "{{reference}}" 300 60 "code128"
@@ -58,8 +58,84 @@ footer:
   center small "github.com/DonnC/receiptscript"
 ```
 
-Install the VSIX through **Extensions: Install from VSIX...** in VS Code. Add
-`sale.preview.json` beside the template and run **RCT: Open Preview**:
+Bindings like `{{item.total | money:currency}}` read from your data. The
+[language reference](docs/language-reference.md) covers every statement and filter.
+
+**2. Render, preview and print.** Create one `ReceiptScript` per printer and reuse it:
+
+```kotlin
+val receipts = ReceiptScript(context, driver)
+
+val receipt = receipts.render("sale", data)   // data: a Map or any Kotlin object
+ReceiptPreview(receipt)                        // in Compose: exactly what will print
+receipts.print(receipt)
+```
+
+`data` is your own model, for example a `Sale` data class with `merchant`, `reference`, `currency`,
+`total` and `items`. No JSON conversion is needed.
+
+**3. Export it** to share or archive:
+
+```kotlin
+val pdf = receipt.toPdf()        // ReceiptFile: bytes, mimeType, extension
+val png = receipt.toImage()
+val bitmap = receipt.toBitmap()
+```
+
+## What you implement
+
+The library has one entry point, `ReceiptScript`. You implement up to three small interfaces, and each
+has a sensible default:
+
+| Interface | Your job | Default |
+| --- | --- | --- |
+| `ReceiptDriver` | Send a receipt to your printer SDK | none (preview and export work without one) |
+| `ReceiptTemplateRepository` | Load template source by ID: assets, database, network, or a mix | `assets/receipts/<id>.rct` |
+| `ReceiptImageResolver` | Turn `image "..."` references into bitmaps | `asset:` paths in your assets |
+
+All three are `fun interface`s, so a lambda is enough:
+
+```kotlin
+val receipts = ReceiptScript(
+    context,
+    driver = ReceiptDriver { receipt -> receipt.bands.forEach { sdk.printBitmap(it) } },
+    templates = ReceiptTemplateRepository { id, _ -> templateDao.source(id) },
+    images = ReceiptImageResolver { source -> logoCache[source] }
+)
+```
+
+A driver can print the rendered bitmaps (as above), or map each `ReceiptBlock` to your SDK's own text,
+table and barcode commands. See [Writing a driver](docs/guides/drivers.md).
+
+## ESC/POS printers
+
+Most portable Bluetooth and USB thermal printers speak ESC/POS. For those, use the bundled driver
+instead of writing one:
+
+```kotlin
+val bluetoothDriver = EscPosDriver(BluetoothPrinterConnection(device))
+val usbDriver = EscPosDriver(UsbPrinterConnection(usbConnection, endpoint))
+val networkDriver = EscPosDriver(TcpPrinterConnection("192.168.1.50"), EscPosProfile.Receipt80)
+```
+
+Your app keeps control of permissions, pairing and device selection. See [Printing](docs/guides/printing.md)
+for paper widths, profiles and other transports.
+
+## Documentation
+
+- [Getting started](docs/getting-started.md): a working receipt in five minutes
+- [Template language reference](docs/language-reference.md): statements, bindings, filters
+- Guides: [drivers](docs/guides/drivers.md), [templates and images](docs/guides/templates-and-images.md),
+  [printing](docs/guides/printing.md), [preview and export](docs/guides/preview-and-export.md),
+  [VS Code](docs/guides/vscode.md), [JVM](docs/guides/jvm.md)
+- [Architecture](docs/architecture.md): how the pieces fit, and why the API looks the way it does
+- [Migrating to 0.7](docs/migration/0.7.md)
+
+## Design templates in VS Code
+
+The ReceiptScript VS Code extension (`.vsix` on [Releases](https://github.com/DonnC/receiptscript/releases))
+adds highlighting, linting and a live preview. Put sample data in `sale.preview.json` next to
+`sale.rct` and run **RCT: Open Preview**:
 
 ```json
 {
@@ -75,178 +151,18 @@ Install the VSIX through **Extensions: Install from VSIX...** in VS Code. Add
 }
 ```
 
-JSON supplies editor sample data. At runtime, pass a map or Kotlin object with
-matching fields; no JSON conversion is required.
+## Example app
 
-## Render, Print, Preview
+Open the repository in Android Studio and run **ReceiptScript Starter**. It renders bank, retail,
+discount, fiscal-style and end-of-day receipts from [the same templates](example/src/main/assets/receipts)
+VS Code previews. Connect your printer in [`SamplePrinter.kt`](example/src/main/java/io/github/donnclab/rct/sample/SamplePrinter.kt).
 
-In a coroutine, configure ReceiptScript with your Android `context` and printer
-`driver`. Here, `data` is your receipt model matching the template above:
+## Contributing
 
-```kotlin
-import zw.co.donnclab.rct.android.*
+Issues and pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) to set up the project
+and run the tests. Report security issues privately as described in [SECURITY.md](SECURITY.md).
 
-val receipts = ReceiptScript(
-    context, driver,
-    AssetReceiptTemplateRepository(context),
-    AssetReceiptMediaResolver(context, "receipts")
-)
+## License
 
-val receipt = receipts.render("sale", data)
-receipts.print(receipt)
-```
-
-Inside Compose, display that same receipt:
-
-```kotlin
-import zw.co.donnclab.rct.compose.ReceiptUiPreview
-
-ReceiptUiPreview(receipt)
-```
-
-Export on a worker dispatcher, then save or share the result in your app:
-
-```kotlin
-val image = receipt.toImageBytes() // PNG: bytes, mimeType, extension
-val pdf = receipt.toPdfBytes()
-val bitmap = receipt.toBitmap()   // Caller-owned bitmap
-```
-
-Rendering performs loading and layout off the UI thread; it never prints.
-A driver is optional for preview/export-only apps. `ReceiptScript(context)` uses
-asset defaults. The [example app](example/src/main/java/dev/receiptscript/sample)
-shows complete screen loading, error handling, and print actions.
-
-## Connect A Printer
-
-For a built-in SDK, implement `ReceiptDriver.print` with your suspending bitmap
-operation. Await the SDK callback and propagate its errors:
-
-```kotlin
-import android.graphics.Bitmap
-
-class TerminalDriver(private val printBitmap: suspend (Bitmap) -> Unit) : ReceiptDriver {
-    override suspend fun print(receipt: Receipt) {
-        for (band in receipt.bands) printBitmap(band)
-    }
-}
-```
-
-For an established Bluetooth or USB-serial connection, use the bundled ESC/POS adapter:
-
-```kotlin
-import zw.co.donnclab.rct.escpos.OutputStreamConnection
-
-val bluetoothDriver = EscPosReceiptPrinter(OutputStreamConnection(socket.outputStream))
-val usbDriver = EscPosReceiptPrinter(OutputStreamConnection(serialOutput))
-```
-
-Pass your chosen driver to `ReceiptScript`. Your app manages permissions and
-connections. USB bulk devices can implement `PrinterConnection`; see the
-[bulk transfer example](src/test/fixtures/integration/UsbPrinterConnection.kt).
-
-The default is 384-dot output. Match `ReceiptOptions.width` and the ESC/POS profile
-to your device; `EscPosProfile.Receipt80` supports 576 dots and opt-in cutting.
-Print bitmap bands without resizing or extra feed to match the preview. Native
-SDK integrations may instead map `receipt.blocks`, using the device's own layout.
-Reuse one client per printer; errors propagate and partial jobs are not retried
-automatically. Stream completion confirms a write, not physical paper status.
-
-## Supply Your Templates And Images
-
-| Interface | Responsibility | Included default |
-| --- | --- | --- |
-| `ReceiptDriver` | Print through your SDK or connection | ESC/POS adapter |
-| `ReceiptTemplateRepository` | Fetch template source by ID and optional arguments | Assets under `receipts/` |
-| `ReceiptMediaResolver<Bitmap>` | Resolve logo/image references | Android assets |
-
-Template IDs are passed unchanged to your repository. An ID can be a filename,
-database key, or any identifier your lookup understands. For custom storage:
-
-```kotlin
-import zw.co.donnclab.rct.ReceiptTemplateRepository
-
-class Templates(private val fetch: suspend (String, Map<String, Any?>) -> String) : ReceiptTemplateRepository {
-    override suspend fun getTemplate(templateId: String, args: Map<String, Any?>) =
-        fetch(templateId, args)
-}
-```
-
-Supply your lookup as `fetch` and pass the repository to the constructor.
-`receipts.render("sale", data, args = mapOf("merchantId" to "M001"))` forwards
-lookup options separately from receipt data. `receipts.renderSource(source, data)`
-accepts an in-memory template directly.
-
-### Shared Branding
-
-Store `merchant.rct` and `customer.rct` fragments alongside your asset templates,
-or return them from your repository:
-
-```rct
-receipt "sale"
-use header "merchant"
-use footer "customer"
-body:
-  kv "TOTAL" "{{total | money:currency}}"
-```
-
-Headers render first and footers last, with a two-line gap before the footer.
-Inline `header:` and `footer:` sections are also supported.
-
-With the image base set to `receipts` as above, put your logo in
-`app/src/main/assets/receipts/logos/merchant.png` and reference it with:
-
-```rct
-image "asset:logos/merchant.png" 96 64
-```
-
-This path also works in VS Code beside `sale.rct`. References may use bindings,
-such as `image "{{logoRef}}" 96 64`. For custom media, implement
-`ReceiptMediaResolver<Bitmap>.resolve(source)` and pass it as `images`. Prepare
-remote images before rendering; return `null` for unknown references. PNG is a
-practical logo default.
-
-## Receipt Elements
-
-| Element | Purpose | Typical use |
-| --- | --- | --- |
-| `left`, `center`, `right`, `text` | Align and style text | Merchant details, headings |
-| `kv` | Separate label and value | References, totals |
-| `table`, `row` | Lay out columns and rows | Baskets, transaction reports |
-| `divider`, `spacer` | Add rules and space | Sections, signatures |
-| `image` | Resolve and size images | Logos |
-| `qr`, `barcode` | Generate scannable codes | Payment links, invoice references |
-| `if`, `for` | Optional and repeated content | Cashback, item lists |
-| `header`, `body`, `footer` | Order receipt sections | Consistent structure |
-| `use header`, `use footer` | Reuse fragments | Shared branding |
-| `meta` | Set layout defaults | Character width, font size |
-
-Text supports `bold`, `underline`, `small`, `big`, and trailing inline font sizes.
-`meta.font` and `fontScaleMode` control defaults; inline sizes win. Tables default
-to equal-width, centered columns. `divider "_"` draws a continuous Android rule.
-Comments start with `#`; indent nested blocks by two spaces.
-
-Filters include `money`, `date`, `datetime`, `maskPan`, configurable `mask`, case
-conversion, defaults, and padding. Datetime defaults to `dd/MM/yyyy HH:mm:ss`.
-Use decimal strings or `BigDecimal` for money; preserve binding property names
-when minifying Kotlin models. Keep PINs, passwords, and track data out of receipts.
-PDF paginates the existing layout and may split a line; prefer it for long reports.
-
-## Example And Development
-
-Open the repository root in Android Studio and run **ReceiptScript Starter**
-(`:example`). Explore bank, SME, discounts, shared branding, fiscal-style, and
-multi-currency receipts with synthetic data and
-[Compose previews](example/src/main/java/dev/receiptscript/sample/ReceiptScreenPreviews.kt).
-
-```shell
-./gradlew :testDebugUnitTest :example:testDebugUnitTest :assembleRelease :example:assembleDebug
-```
-
-For JVM/VSIX builds, use Node.js 22+, run `npm ci` in `tools/`, then
-`npm run release:kotlin` or `npm run package:extension`. Output goes to `artifacts/`.
-The JVM JAR exposes the storage-independent engine and ESC/POS output; Android apps
-use the AAR. Issues and pull requests are welcome, with minimal templates and
-sanitized data for rendering issues.
-
-[MIT](LICENSE) · [Third-party notices](THIRD_PARTY_NOTICES.md)
+[MIT](LICENSE). Bundled fonts and dependencies keep their own licenses; see
+[third-party notices](THIRD_PARTY_NOTICES.md).

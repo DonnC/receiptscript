@@ -14,7 +14,8 @@ function visit(directory) {
         const template = new URL(entry.name.replace(".preview.json", ".rct"), directory);
         const engine = new ReceiptScript({loadTemplate: id => readFileSync(new URL(`${id}.rct`, directory), "utf8")});
         const receipt = engine.compile(readFileSync(template, "utf8")).render(JSON.parse(readFileSync(url, "utf8")));
-        const html = receipt.render(new HtmlRenderer({resolveImage: ref => `data:image/png;base64,${readFileSync(new URL(ref, directory)).toString("base64")}`}));
+        // Resolve images the way the VS Code extension does: relative to the template, "asset:" optional.
+        const html = receipt.render(new HtmlRenderer({resolveImage: ref => `data:image/png;base64,${readFileSync(new URL(ref.replace(/^asset:/, ""), directory)).toString("base64")}`}));
         assert.match(html, /<main class="receipt">/);
       });
     }

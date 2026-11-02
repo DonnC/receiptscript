@@ -79,19 +79,20 @@ const compilerPath = [...jars.values()].join(delimiter);
 const stdlib = jars.get("kotlin-stdlib");
 const annotations = jars.get("annotations");
 const zxing = jars.get("core");
-async function compile(directories, destination, classpath, module) {
+async function compile(directories, destination, classpath, module, extra = []) {
   await mkdir(destination, {recursive: true});
   const sources = (await Promise.all(directories.map(files))).flat().filter(file => file.endsWith(".kt"));
   run(["-cp", compilerPath, "org.jetbrains.kotlin.cli.jvm.K2JVMCompiler", "-no-stdlib", "-no-reflect", "-jvm-target", "11",
-    "-module-name", module, "-classpath", classpath.join(delimiter), "-d", destination, ...sources]);
+    "-module-name", module, "-classpath", classpath.join(delimiter), "-d", destination, ...extra, ...sources]);
 }
 
 const coreClasses = join(work, "core");
 const testClasses = join(work, "tests");
-await compile(["src/main/kotlin"], coreClasses, [stdlib, annotations, zxing], "receiptscript");
+// Explicit API mode matches the Gradle build: public declarations must be marked public on purpose.
+await compile(["src/main/kotlin"], coreClasses, [stdlib, annotations, zxing], "receiptscript", ["-Xexplicit-api=strict"]);
 const testPath = [coreClasses, stdlib, annotations, zxing, jars.get("junit"), jars.get("hamcrest-core")];
-await compile(["src/test/kotlin"],
-  testClasses, testPath, "receiptscript_tests");
+// Tests are a friend module so they can reach internal declarations, as Gradle unit tests do.
+await compile(["src/test/kotlin"], testClasses, testPath, "receiptscript_tests", [`-Xfriend-paths=${coreClasses}`]);
 const testNames = [];
 for (const file of (await files("src/test/kotlin")).filter(file => file.endsWith("Test.kt"))) {
   const source = await readFile(file, "utf8");
@@ -136,7 +137,7 @@ await copyFile(stdlib, join(stage, "runtime-jvm", `kotlin-stdlib-${lock.kotlin}.
 
 // Prove the published surface works using only the assembled JARs and their runtime dependencies.
 const consumer = join(work, "consumer");
-await compile(["tools/test/release", "src/test/fixtures/readme"], consumer, [coreJar, stdlib, zxing], "release_consumer");
+await compile(["tools/test/release"], consumer, [coreJar, stdlib, zxing], "release_consumer");
 run(["-cp", [consumer, coreJar, stdlib, zxing].join(delimiter), "receiptscript.releasecheck.ConsumerKt", resolve("example/src/main/assets/templates/readme/sale.rct")]);
 
 for (const name of ["VERSION", "LICENSE", "THIRD_PARTY_NOTICES.md"]) await copyFile(name, join(stage, name));
@@ -156,7 +157,7 @@ for (const file of ["build.gradle.kts", "settings.gradle.kts", "gradle.propertie
 }
 await writeFile(join(stage, "release.json"), JSON.stringify({version, kotlin: lock.kotlin, jvmTarget: 11,
   runtimeDependencies: [{name: "kotlin-stdlib", version: lock.kotlin}, {name: "zxing-core", version: "3.5.3", optional: true}],
-  verification: ["core and driver JUnit tests", "consumer compiled and executed against packaged JARs"]}, null, 2) + "\n");
+  verification: ["core and ESC/POS JUnit tests", "consumer compiled and executed against packaged JARs"]}, null, 2) + "\n");
 const checksums = [];
 for (const file of await files(stage)) checksums.push(`${hash(await readFile(file))}  ${file.slice(stage.length + 1).replaceAll("\\", "/")}`);
 await writeFile(join(stage, "SHA256SUMS"), checksums.join("\n") + "\n");

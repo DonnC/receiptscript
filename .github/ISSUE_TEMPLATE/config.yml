@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://github.com/DonnC/receiptscript/tree/main/docs
+    about: Guides and the template language reference.
+  - name: Report a security vulnerability
+    url: https://github.com/DonnC/receiptscript/security/advisories/new
+    about: Report privately. Do not open a public issue.

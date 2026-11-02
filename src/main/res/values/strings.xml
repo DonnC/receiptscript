@@ -1,4 +1,3 @@
 <resources>
-    <string name="rct_preview_unavailable">Receipt preview is unavailable.</string>
     <string name="rct_preview_part">Receipt preview, part %1$d</string>
 </resources>

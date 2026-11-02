@@ -4,13 +4,13 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 android {
-    namespace = "dev.receiptscript.sample"
+    namespace = "io.github.donnclab.rct.sample"
     compileSdk = 36
     defaultConfig {
-        applicationId = "dev.receiptscript.sample"
+        applicationId = "io.github.donnclab.rct.sample"
         minSdk = 26
         targetSdk = 36
-        versionCode = 3
+        versionCode = 4
         versionName = project.version.toString()
     }
     buildFeatures { compose = true }
@@ -22,7 +22,7 @@ android {
 kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11) } }
 dependencies {
     implementation(project(":"))
-    implementation(platform("androidx.compose:compose-bom:2026.02.01"))
+    implementation(platform("androidx.compose:compose-bom:${rootProject.extra["composeBom"]}"))
     implementation("androidx.activity:activity-compose:1.12.4")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.ui:ui-tooling-preview")
