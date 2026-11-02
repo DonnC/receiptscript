@@ -57,8 +57,9 @@ A smaller, clearer API under a new package. See the [migration guide](docs/migra
 
 - Kotlin explicit API mode is enabled, for both the Gradle build and the JVM release build.
 - ESC/POS command bytes are named constants (`EscPosCommands`) instead of bare numbers.
-- The example app is down to four source files, and repository fixtures no longer ship inside its
-  APK: the README template moved to `docs/examples/`, the Node demo template to `tools/examples/node/`,
+- The example app is reorganised into four source files. Opening a sample shows Receipt, Template
+  and Data tabs you can tap or swipe, with print in the app bar; the Template and Data tabs stay
+  readable when a render fails. Repository fixtures no longer ship inside its APK: the README template moved to `docs/examples/`, the Node demo template to `tools/examples/node/`,
   and the remaining samples into the JS engine's test fixtures.
 - Dependabot opens one grouped pull request per ecosystem each month.
 - Uncompiled integration snippets in `src/test/fixtures` replaced by compiled examples.

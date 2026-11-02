@@ -153,9 +153,9 @@ adds highlighting, linting and a live preview. Put sample data in `sale.preview.
 
 ## Example app
 
-Open the repository in Android Studio and run **ReceiptScript Starter**. It renders bank, retail,
-discount, fiscal-style and end-of-day receipts from [the same templates](example/src/main/assets/receipts)
-VS Code previews. Connect your printer in [`SamplePrinter.kt`](example/src/main/java/io/github/donnclab/rct/sample/SamplePrinter.kt).
+Open the repository in Android Studio and run **ReceiptScript Starter**. Pick a sample (bank,
+retail, discount, fiscal-style or end-of-day) and swipe between the rendered receipt, its
+[`.rct` template](example/src/main/assets/receipts) and its sample data; print from the app bar. Connect your printer in [`SamplePrinter.kt`](example/src/main/java/io/github/donnclab/rct/sample/SamplePrinter.kt).
 
 ## Contributing
 

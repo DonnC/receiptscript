@@ -2,23 +2,26 @@ package io.github.donnclab.rct.sample
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -28,72 +31,90 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.donnclab.rct.Receipt
 import io.github.donnclab.rct.compose.ReceiptPreview
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
-/** The same screen is used by the activity and Studio previews; it never loads or prints data. */
+/*
+ * The starter app's UI. It only draws GalleryUiState; loading and printing live in MainActivity.kt.
+ * Gallery: a list of samples. Detail: Receipt / Template / Data tabs, swipeable, with print in the app bar.
+ */
+
+private val Tabs = listOf("Receipt", "Template", "Data")
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReceiptGalleryScreen(
     state: GalleryUiState,
+    initialTab: Int = 0,
     onSelect: (SampleExample) -> Unit = {},
-    onGallery: () -> Unit = {},
-    onTab: (Int) -> Unit = {},
+    onBack: () -> Unit = {},
     onPrint: () -> Unit = {}
 ) {
-    val selected = state.selected
-    val tab = state.tab
-    Scaffold { insets ->
-        Column(Modifier.fillMaxSize().padding(insets).background(Brush.verticalGradient(
-            listOf(MaterialTheme.colorScheme.background, MaterialTheme.colorScheme.surface)))) {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                Column(Modifier.weight(1f)) {
-                    Text("RECEIPTSCRIPT / STARTER", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                    Text(selected?.title ?: "Small paper. Big possibilities.", fontFamily = FontFamily.Serif,
-                        style = MaterialTheme.typography.headlineSmall)
-                }
-                if (selected != null) TextButton(onClick = onGallery) { Text("Gallery") }
+    val example = state.selected
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(example?.title ?: "ReceiptScript", maxLines = 1) },
+                navigationIcon = {
+                    if (example != null) IconButton(onClick = onBack, enabled = !state.printing) {
+                        Icon(painterResource(R.drawable.ic_arrow_back), contentDescription = "Back to samples")
+                    }
+                },
+                actions = { if (example != null) PrintAction(state, onPrint) },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+            )
+        }
+    ) { insets ->
+        Box(Modifier.fillMaxSize().padding(insets)) {
+            if (example == null) SampleList(onSelect) else SampleDetail(example, state, initialTab)
+        }
+    }
+}
+
+@Composable
+private fun PrintAction(state: GalleryUiState, onPrint: () -> Unit) {
+    if (state.printing) {
+        CircularProgressIndicator(Modifier.padding(12.dp).size(24.dp), strokeWidth = 2.dp)
+    } else {
+        IconButton(onClick = onPrint, enabled = state.receipt?.isSuccess == true) {
+            Icon(
+                painterResource(R.drawable.ic_print),
+                contentDescription = if (state.printerConnected) "Print receipt" else "Print receipt (no printer connected)"
+            )
+        }
+    }
+}
+
+@Composable
+private fun SampleList(onSelect: (SampleExample) -> Unit) {
+    LazyColumn(
+        contentPadding = PaddingValues(20.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        item {
+            Column {
+                Text("Sample receipts", style = MaterialTheme.typography.headlineSmall, fontFamily = FontFamily.Serif)
+                Text(
+                    "Each sample is a real .rct template with sample data. Open one to see the receipt, " +
+                        "its template and its data. Swipe between them, and print from the top bar.",
+                    Modifier.padding(top = 4.dp, bottom = 8.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
-            val example = selected
-            if (example == null) {
-                Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Real templates. One engine. Your printer.", style = MaterialTheme.typography.bodyMedium)
-                    SampleCatalog.examples.forEachIndexed { index, item ->
-                        OutlinedCard(Modifier.fillMaxWidth().clickable { onSelect(item) }, shape = RoundedCornerShape(16.dp)) {
-                            Row(Modifier.padding(18.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                                Text("0${index + 1}", fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.primary)
-                                Column { Text(item.title, fontWeight = FontWeight.SemiBold); Text(item.description, style = MaterialTheme.typography.bodySmall) }
-                            }
-                        }
-                    }
-                    Spacer(Modifier.height(16.dp))
-                }
-            } else {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                    listOf("Receipt", ".rct", "Data").forEachIndexed { index, label ->
-                        TextButton(onClick = { onTab(index) }) { Text(if (tab == index) "[$label]" else label) }
-                    }
-                }
-                val loaded = state.document
-                val previewDocument = loaded?.getOrNull()
-                val receiptDocument = previewDocument?.sample
-                when {
-                    loaded == null -> CircularProgressIndicator(Modifier.padding(24.dp))
-                    receiptDocument == null -> Text("Could not render: ${loaded.exceptionOrNull()?.message}", Modifier.padding(20.dp))
-                    else -> {
-                        key(example.id, tab) {
-                            Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp)) {
-                                if (tab == 0) {
-                                    Box(Modifier.widthIn(max = 520.dp).fillMaxWidth().align(Alignment.CenterHorizontally)) {
-                                        PaperReceipt(requireNotNull(previewDocument).receipt)
-                                    }
-                                } else SourcePanel(
-                                    source = if (tab == 1) receiptDocument.source else receiptDocument.contextJson,
-                                    filename = if (tab == 1) "${example.id}.rct" else "${example.id}.preview.json"
-                                )
-                            }
-                        }
-                        Button(enabled = !state.printing, modifier = Modifier.fillMaxWidth().padding(16.dp), onClick = onPrint) {
-                            Text(if (state.printing) "Printing..." else if (!state.printerConnected) "Connect your printer" else "Print receipt")
-                        }
+        }
+        itemsIndexed(SampleCatalog.examples, key = { _, item -> item.id }) { index, item ->
+            ElevatedCard(
+                Modifier.fillMaxWidth().clickable { onSelect(item) },
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+            ) {
+                Row(Modifier.padding(18.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Text("%02d".format(index + 1), fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.primary)
+                    Column {
+                        Text(item.title, fontWeight = FontWeight.SemiBold)
+                        Text(item.description, style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
@@ -101,73 +122,125 @@ fun ReceiptGalleryScreen(
     }
 }
 
-/** Decoration is screen-only. The pixels inside the paper are the actual print job. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SampleDetail(example: SampleExample, state: GalleryUiState, initialTab: Int) {
+    val pager = rememberPagerState(initialPage = initialTab) { Tabs.size }
+    val scope = rememberCoroutineScope()
+    Column(Modifier.fillMaxSize()) {
+        PrimaryTabRow(selectedTabIndex = pager.currentPage, containerColor = MaterialTheme.colorScheme.surfaceContainer) {
+            Tabs.forEachIndexed { index, label ->
+                Tab(
+                    selected = pager.currentPage == index,
+                    onClick = { scope.launch { pager.animateScrollToPage(index) } },
+                    text = { Text(label) }
+                )
+            }
+        }
+        HorizontalPager(pager, Modifier.fillMaxSize()) { page ->
+            when (page) {
+                0 -> ReceiptPage(state.receipt)
+                1 -> SourcePage(state.sample?.source, "${example.id}.rct")
+                else -> SourcePage(state.sample?.contextJson, "${example.id}.preview.json")
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReceiptPage(receipt: Result<Receipt>?) {
+    val rendered = receipt?.getOrNull()
+    when {
+        receipt == null -> Loading()
+        rendered == null -> Box(Modifier.fillMaxSize().padding(24.dp)) {
+            Text(
+                "Could not render this receipt:\n${receipt.exceptionOrNull()?.message}\n\n" +
+                    "Check the Template and Data tabs.",
+                color = MaterialTheme.colorScheme.error
+            )
+        }
+        else -> Column(
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(vertical = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            PaperReceipt(rendered)
+        }
+    }
+}
+
+/** Decoration is screen-only. The pixels inside the paper are exactly what prints. */
 @Composable
 fun PaperReceipt(receipt: Receipt, modifier: Modifier = Modifier) {
-    Box(modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
-        Column(Modifier.widthIn(max = if (receipt.width > 384) 336.dp else 280.dp).fillMaxWidth()
-            .shadow(8.dp, RoundedCornerShape(16.dp)).clip(RoundedCornerShape(16.dp)).background(Color.White)) {
-            ReceiptPreview(receipt, Modifier.fillMaxWidth())
-        }
+    Column(
+        modifier.widthIn(max = if (receipt.width > 384) 336.dp else 280.dp).fillMaxWidth()
+            .shadow(8.dp, RoundedCornerShape(4.dp)).clip(RoundedCornerShape(4.dp)).background(Color.White)
+    ) {
+        ReceiptPreview(receipt, Modifier.fillMaxWidth())
     }
 }
 
-/** Template or JSON source, shown as selectable monospace text. */
+/**
+ * Template or JSON source as selectable monospace text. Long lines wrap rather than scroll
+ * sideways, so a horizontal swipe always moves between tabs.
+ */
 @Composable
-private fun SourcePanel(source: String, filename: String) {
-    Column(Modifier.fillMaxWidth().padding(vertical = 8.dp).clip(RoundedCornerShape(14.dp)).background(Color(0xFF18232A))) {
-        Text(filename, Modifier.fillMaxWidth().background(Color(0xFF24333C)).padding(14.dp),
-            color = Color(0xFFE2E9E9), fontFamily = FontFamily.Monospace, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-        SelectionContainer(Modifier.horizontalScroll(rememberScrollState())) {
-            Text(source.trimEnd(), Modifier.padding(16.dp), color = Color(0xFFE2E9E9),
-                fontFamily = FontFamily.Monospace, fontSize = 12.sp, lineHeight = 20.sp, softWrap = false)
+private fun SourcePage(source: String?, filename: String) {
+    if (source == null) Loading() else Column(Modifier.fillMaxSize().padding(12.dp).clip(RoundedCornerShape(14.dp)).background(Color(0xFF18232A))) {
+        Text(
+            filename, Modifier.fillMaxWidth().background(Color(0xFF24333C)).padding(14.dp),
+            color = Color(0xFFE2E9E9), fontFamily = FontFamily.Monospace, fontSize = 12.sp, fontWeight = FontWeight.Medium
+        )
+        SelectionContainer(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+            Text(
+                source.trimEnd(), Modifier.padding(16.dp), color = Color(0xFFE2E9E9),
+                fontFamily = FontFamily.Monospace, fontSize = 12.sp, lineHeight = 20.sp
+            )
         }
     }
 }
 
-// Android Studio previews of every screen. They render synchronously because previews cannot wait
-// for produceState.
+@Composable
+private fun Loading() {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+}
+
+// Android Studio previews. Previews cannot wait for coroutines, so they render with runBlocking.
 
 class ReceiptExamplePreviewProvider : PreviewParameterProvider<SampleExample> {
     override val values: Sequence<SampleExample> get() = SampleCatalog.examples.asSequence()
 }
 
 @Composable
-private fun receiptScreenState(example: SampleExample, tab: Int = 0): GalleryUiState {
+private fun previewState(example: SampleExample): GalleryUiState {
     val context = LocalContext.current
-    return remember(context, example.id, tab) {
+    return remember(context, example.id) {
         val catalog = SampleCatalog { context.assets.open(it).bufferedReader().use { reader -> reader.readText() } }
-        val document = runCatching {
-            val sample = catalog.open(example)
-            PreviewDocument(sample, runBlocking { sampleReceipts(context).render(example.id, catalog.data(sample)) })
-        }
-        GalleryUiState(selected = example, document = document, tab = tab)
+        val sample = catalog.open(example)
+        val receipt = runCatching { runBlocking { sampleReceipts(context).render(example.id, catalog.data(sample)) } }
+        GalleryUiState(selected = example, sample = sample, receipt = receipt)
     }
 }
 
-@Preview(name = "Template gallery", group = "Gallery", showBackground = true, widthDp = 390, heightDp = 820)
+@Preview(name = "Samples", group = "Gallery", showBackground = true, widthDp = 390, heightDp = 820)
 @Composable
-private fun GalleryScreenPreview() {
+private fun SampleListPreview() {
     StarterTheme { ReceiptGalleryScreen(GalleryUiState()) }
 }
 
-@Preview(name = "Receipt screen", group = "Receipts", showBackground = true, widthDp = 390, heightDp = 820)
+@Preview(name = "Receipt", group = "Receipts", showBackground = true, widthDp = 390, heightDp = 820)
 @Composable
-private fun ReceiptScreenPreview(@PreviewParameter(ReceiptExamplePreviewProvider::class) example: SampleExample) {
-    val state = receiptScreenState(example)
-    StarterTheme { ReceiptGalleryScreen(state) }
+private fun ReceiptTabPreview(@PreviewParameter(ReceiptExamplePreviewProvider::class) example: SampleExample) {
+    StarterTheme { ReceiptGalleryScreen(previewState(example)) }
 }
 
-@Preview(name = "RCT source", group = "Code", showBackground = true, widthDp = 390, heightDp = 820)
+@Preview(name = "Template", group = "Tabs", showBackground = true, widthDp = 390, heightDp = 820)
 @Composable
-private fun TemplateScreenPreview() {
-    val state = receiptScreenState(SampleCatalog.examples.first { it.id == "bank" }, tab = 1)
-    StarterTheme { ReceiptGalleryScreen(state) }
+private fun TemplateTabPreview() {
+    StarterTheme { ReceiptGalleryScreen(previewState(SampleCatalog.examples.first { it.id == "bank" }), initialTab = 1) }
 }
 
-@Preview(name = "JSON context", group = "Code", showBackground = true, widthDp = 390, heightDp = 820)
+@Preview(name = "Data", group = "Tabs", showBackground = true, widthDp = 390, heightDp = 820)
 @Composable
-private fun DataScreenPreview() {
-    val state = receiptScreenState(SampleCatalog.examples.first { it.id == "bank" }, tab = 2)
-    StarterTheme { ReceiptGalleryScreen(state) }
+private fun DataTabPreview() {
+    StarterTheme { ReceiptGalleryScreen(previewState(SampleCatalog.examples.first { it.id == "bank" }), initialTab = 2) }
 }
