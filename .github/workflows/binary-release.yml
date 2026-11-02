@@ -28,7 +28,7 @@ jobs:
       - run: npm ci
       - run: npm run release:kotlin
       - run: npm run package:extension
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: receiptscript-binaries-${{ matrix.os }}
           path: |
@@ -58,7 +58,7 @@ jobs:
           cp "build/outputs/aar/receiptscript-$version.aar" "artifacts/receiptscript-$version.aar"
           cp build/publications/receiptScript/pom-default.xml "artifacts/receiptscript-$version.pom"
           cp example/build/outputs/apk/debug/example-debug.apk "artifacts/receiptscript-example-$version.apk"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: receiptscript-android
           path: |
