@@ -10,13 +10,17 @@ import kotlinx.coroutines.withContext
 /**
  * The default [ReceiptImageResolver]: decodes `asset:<path>` references from your app's assets.
  *
- * With `directory = "receipts"`, the template line `image "asset:logos/shop.png" 96 64` loads
- * `assets/receipts/logos/shop.png`. Other references (URLs, database keys) return null, so wrap or
- * replace this resolver to support them. Images are decoded as-is; no resizing or network access.
+ * By default paths are relative to the assets root, so `image "asset:logos/shop.png" 96 64` loads
+ * `assets/logos/shop.png`. Pass a [directory] to resolve relative to a sub-folder instead: with
+ * `directory = "receipts"` the same line loads `assets/receipts/logos/shop.png`, which is also how
+ * the VS Code preview resolves it for a template stored in `assets/receipts/`.
+ *
+ * Other references (URLs, database keys) return null, so wrap or replace this resolver to support
+ * them. Images are decoded as-is; no resizing or network access.
  */
 public class AssetImageResolver(
     context: Context,
-    private val directory: String = "receipts"
+    private val directory: String = ""
 ) : ReceiptImageResolver {
     private val assets = context.applicationContext.assets
 

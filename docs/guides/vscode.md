@@ -29,8 +29,9 @@ Keep the JSON shape the same as your Kotlin model, so the field names in binding
 
 ## Images in the preview
 
-Image references resolve relative to the template file, with or without the `asset:` prefix, so
-`image "asset:logos/shop.png"` works in both the preview and the default `AssetImageResolver`.
+Image references resolve relative to the template file, with or without the `asset:` prefix. For
+the app to read the same file, create the resolver with the template folder:
+`AssetImageResolver(context, directory = "receipts")`.
 The preview reads only local PNG, JPEG, GIF and WebP files under 5 MB, inside the template's folder. If your app loads
 images from URLs or a database, put a local file path in the preview JSON instead, for example
 `"logoUrl": "asset:logos/shop.png"`.

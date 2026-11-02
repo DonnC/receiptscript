@@ -50,14 +50,19 @@ fun mixedTemplates(context: Context, dao: TemplateDao, api: Api): ReceiptTemplat
 
 ### Lookup arguments
 
-The third parameter of `render` is passed to your repository unchanged, and is never visible to the
-template. Use it to choose between versions of the same template:
+The third parameter of `render` is optional and is passed to your repository unchanged. It is
+never visible to the template. Use it for anything your lookup needs to decide, such as a merchant,
+a locale, or a flag that picks between sources in a single repository:
 
 ```kotlin
-receipts.render("sale", sale, args = mapOf("merchantId" to "M001"))
+val templates = ReceiptTemplateRepository { id, args ->
+    if (args["source"] == "db") dao.source(id, null) ?: error("No template '$id'") else bundled.getTemplate(id)
+}
+receipts.render("sale", sale, args = mapOf("source" to "db", "merchantId" to "M001"))
 ```
 
-The same `args` are used when loading that template's fragments.
+The same `args` are used when loading that template's fragments. To call a repository yourself
+without options, `repository.getTemplate(id)` passes an empty map.
 
 ### Templates you already have in memory
 
@@ -102,14 +107,21 @@ applied. Return null for references you do not recognise; rendering then fails w
 
 ### The default: app assets
 
-`AssetImageResolver` handles `asset:` references, relative to `assets/receipts/`:
+`AssetImageResolver` handles `asset:` references, relative to the assets root:
 
 ```rct
 image "asset:logos/shop.png" 96 64
 ```
 
-loads `app/src/main/assets/receipts/logos/shop.png`. The same reference works in the VS Code preview,
-relative to the template file.
+loads `app/src/main/assets/logos/shop.png`. To resolve relative to a sub-folder, pass `directory`:
+
+```kotlin
+ReceiptScript(context, images = AssetImageResolver(context, directory = "receipts"))
+```
+
+Now the same line loads `assets/receipts/logos/shop.png`. The VS Code preview resolves images
+relative to the template file, so with templates in `assets/receipts/`, `directory = "receipts"`
+makes the app and the preview read the same file.
 
 ### Network and asset images together
 

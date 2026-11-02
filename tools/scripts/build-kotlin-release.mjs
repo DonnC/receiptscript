@@ -138,7 +138,7 @@ await copyFile(stdlib, join(stage, "runtime-jvm", `kotlin-stdlib-${lock.kotlin}.
 // Prove the published surface works using only the assembled JARs and their runtime dependencies.
 const consumer = join(work, "consumer");
 await compile(["tools/test/release"], consumer, [coreJar, stdlib, zxing], "release_consumer");
-run(["-cp", [consumer, coreJar, stdlib, zxing].join(delimiter), "receiptscript.releasecheck.ConsumerKt", resolve("example/src/main/assets/templates/readme/sale.rct")]);
+run(["-cp", [consumer, coreJar, stdlib, zxing].join(delimiter), "receiptscript.releasecheck.ConsumerKt", resolve("docs/examples/sale.rct")]);
 
 for (const name of ["VERSION", "LICENSE", "THIRD_PARTY_NOTICES.md"]) await copyFile(name, join(stage, name));
 await mkdir(join(stage, "licenses"), {recursive: true});

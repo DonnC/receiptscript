@@ -3,13 +3,13 @@ import { fileURLToPath } from 'node:url';
 import { ReceiptScript } from '@receiptscript/core';
 import { HtmlRenderer } from '@receiptscript/core/html';
 
-const directory = new URL('../../../example/src/main/assets/templates/receipt-showcase/', import.meta.url);
+const directory = new URL('./showcase/', import.meta.url);
 const source = readFileSync(new URL('showcase.rct', directory), 'utf8');
 const data = JSON.parse(readFileSync(new URL('showcase.preview.json', directory), 'utf8'));
 const receipt = new ReceiptScript().compile(source).render(data);
 const html = receipt.render(new HtmlRenderer({
   resolveImage(reference) {
-    const image = readFileSync(new URL(reference, directory));
+    const image = readFileSync(new URL(reference.replace(/^asset:/, ""), directory));
     return `data:image/png;base64,${image.toString('base64')}`;
   }
 }));

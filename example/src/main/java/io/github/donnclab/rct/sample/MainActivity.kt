@@ -1,32 +1,34 @@
 package io.github.donnclab.rct.sample
 
+import android.content.Context
+import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import android.os.Bundle
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import io.github.donnclab.rct.AssetImageResolver
+import io.github.donnclab.rct.Receipt
+import io.github.donnclab.rct.ReceiptDriver
+import io.github.donnclab.rct.ReceiptScript
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import io.github.donnclab.rct.Receipt
-import io.github.donnclab.rct.ReceiptScript
+
+/*
+ * The starter app. Everything that touches ReceiptScript is in this file:
+ *  - one ReceiptScript, created with the driver from SamplePrinter.kt
+ *  - render(id, data) on selection, print(receipt) on the button
+ * GalleryScreen.kt only draws state; SampleCatalog.kt reads the bundled templates and sample data.
+ */
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -47,12 +49,10 @@ internal fun StarterTheme(content: @Composable () -> Unit) {
 }
 
 @Composable
-fun ReceiptGallery(printer: SamplePrinter? = null) {
+fun ReceiptGallery(printer: ReceiptDriver? = null) {
     val context = LocalContext.current
     val catalog = remember(context) { SampleCatalog { context.assets.open(it).bufferedReader().use { reader -> reader.readText() } } }
-    val receipts = remember(context, printer) {
-        ReceiptScript(context, printer)
-    }
+    val receipts = remember(context, printer) { sampleReceipts(context, printer) }
     var selected by remember { mutableStateOf<SampleExample?>(null) }
     var tab by remember { mutableIntStateOf(0) }
     var message by remember { mutableStateOf<String?>(null) }
@@ -97,6 +97,13 @@ fun ReceiptGallery(printer: SamplePrinter? = null) {
         text = { Text(text) }, confirmButton = { TextButton(onClick = { message = null }) { Text("Close") } }) }
 }
 
+/**
+ * The one ReceiptScript the app uses. Templates come from `assets/receipts/` (the default), and
+ * images resolve from the same folder, so `asset:logo.png` works here and in the VS Code preview.
+ */
+fun sampleReceipts(context: Context, printer: ReceiptDriver? = null): ReceiptScript =
+    ReceiptScript(context, printer, images = AssetImageResolver(context, directory = "receipts"))
+
 /** A gallery entry: its source files and the rendered receipt. */
 data class PreviewDocument(val sample: SampleSource, val receipt: Receipt)
 
@@ -107,75 +114,3 @@ data class GalleryUiState(
     val printing: Boolean = false,
     val printerConnected: Boolean = false
 )
-
-/** The same screen is used by the activity and Studio previews; it never loads or prints data. */
-@Composable
-fun ReceiptGalleryScreen(
-    state: GalleryUiState,
-    onSelect: (SampleExample) -> Unit = {},
-    onGallery: () -> Unit = {},
-    onTab: (Int) -> Unit = {},
-    onPrint: () -> Unit = {}
-) {
-    val selected = state.selected
-    val tab = state.tab
-    Scaffold { insets ->
-        Column(Modifier.fillMaxSize().padding(insets).background(Brush.verticalGradient(
-            listOf(MaterialTheme.colorScheme.background, MaterialTheme.colorScheme.surface)))) {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                Column(Modifier.weight(1f)) {
-                    Text("RECEIPTSCRIPT / STARTER", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                    Text(selected?.title ?: "Small paper. Big possibilities.", fontFamily = FontFamily.Serif,
-                        style = MaterialTheme.typography.headlineSmall)
-                }
-                if (selected != null) TextButton(onClick = onGallery) { Text("Gallery") }
-            }
-            val example = selected
-            if (example == null) {
-                Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Real templates. One engine. Your printer.", style = MaterialTheme.typography.bodyMedium)
-                    SampleCatalog.examples.forEachIndexed { index, item ->
-                        OutlinedCard(Modifier.fillMaxWidth().clickable { onSelect(item) }, shape = RoundedCornerShape(16.dp)) {
-                            Row(Modifier.padding(18.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                                Text("0${index + 1}", fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.primary)
-                                Column { Text(item.title, fontWeight = FontWeight.SemiBold); Text(item.description, style = MaterialTheme.typography.bodySmall) }
-                            }
-                        }
-                    }
-                    Spacer(Modifier.height(16.dp))
-                }
-            } else {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                    listOf("Receipt", ".rct", "Data").forEachIndexed { index, label ->
-                        TextButton(onClick = { onTab(index) }) { Text(if (tab == index) "[$label]" else label) }
-                    }
-                }
-                val loaded = state.document
-                val previewDocument = loaded?.getOrNull()
-                val receiptDocument = previewDocument?.sample
-                when {
-                    loaded == null -> CircularProgressIndicator(Modifier.padding(24.dp))
-                    receiptDocument == null -> Text("Could not render: ${loaded.exceptionOrNull()?.message}", Modifier.padding(20.dp))
-                    else -> {
-                        key(example.id, tab) {
-                            Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp)) {
-                                if (tab == 0) {
-                                    Box(Modifier.widthIn(max = 520.dp).fillMaxWidth().align(androidx.compose.ui.Alignment.CenterHorizontally)) {
-                                        PaperReceipt(requireNotNull(previewDocument).receipt)
-                                    }
-                                } else CodePanel(
-                                    source = if (tab == 1) receiptDocument.source else receiptDocument.contextJson,
-                                    filename = if (tab == 1) "${example.id}.rct" else "${example.id}.preview.json",
-                                    language = if (tab == 1) CodeLanguage.RCT else CodeLanguage.JSON
-                                )
-                            }
-                        }
-                        Button(enabled = !state.printing, modifier = Modifier.fillMaxWidth().padding(16.dp), onClick = onPrint) {
-                            Text(if (state.printing) "Printing..." else if (!state.printerConnected) "Connect your printer" else "Print receipt")
-                        }
-                    }
-                }
-            }
-        }
-    }
-}

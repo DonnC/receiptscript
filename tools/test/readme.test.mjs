@@ -12,7 +12,7 @@ const fences = [...readme.matchAll(/```(\w+)\r?\n([\s\S]*?)```/g)];
 test("README receipt and preview data match the illustrated example", () => {
   const template = fences.find(match => match[1] === "rct")[2].trim();
   const data = JSON.parse(fences.find(match => match[1] === "json")[2]);
-  const examples = root + "example/src/main/assets/templates/readme/";
+  const examples = root + "docs/examples/";
   const statements = source => source.split(/\r?\n/).filter(line => line.trim()).join("\n");
   assert.equal(statements(template), statements(readFileSync(examples + "sale.rct", "utf8")));
   assert.deepEqual(data, JSON.parse(readFileSync(examples + "sale.preview.json", "utf8")));

@@ -25,9 +25,9 @@ class AssetResolversTest {
 
     @Test fun `template assets load utf8 and reject traversal`() = runBlocking {
         val assets = AssetTemplateRepository(context, "licenses", ".txt")
-        assertTrue(assets.getTemplate("ReceiptScript-MIT", emptyMap()).contains("MIT License"))
+        assertTrue(assets.getTemplate("ReceiptScript-MIT").contains("MIT License"))
         try {
-            assets.getTemplate("../outside", emptyMap())
+            assets.getTemplate("../outside")
             fail("Expected invalid identifier")
         } catch (_: IllegalArgumentException) { }
     }

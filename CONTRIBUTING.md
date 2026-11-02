@@ -54,6 +54,7 @@ Instrumented tests (`src/androidTest`) need a device or emulator: `./gradlew :co
 | `src/test/kotlin` | JVM unit tests, and the JVM example used by the docs |
 | `src/test/java` | Robolectric tests, and the Android examples used by the docs |
 | `example/` | the starter app and its sample templates |
+| `docs/examples/` | the README template and its preview data, also used by tests and the README image |
 | `tools/web` | the JavaScript engine used by the VS Code preview |
 | `tools/vscode-extension` | the VS Code extension |
 | `docs/` | documentation |

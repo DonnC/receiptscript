@@ -1,23 +1,27 @@
-# Weekly dependency updates. Group minor and patch bumps so they arrive as one pull request per ecosystem.
+# Monthly dependency updates. Every update Dependabot finds for an ecosystem, major versions
+# included, arrives in one grouped pull request, so each month shows everything at once.
 version: 2
 updates:
   - package-ecosystem: gradle
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
     groups:
-      gradle-minor:
-        update-types: [minor, patch]
+      gradle:
+        patterns: ["*"]
 
   - package-ecosystem: npm
     directory: /tools
     schedule:
-      interval: weekly
+      interval: monthly
     groups:
-      npm-minor:
-        update-types: [minor, patch]
+      npm:
+        patterns: ["*"]
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: monthly
+    groups:
+      github-actions:
+        patterns: ["*"]

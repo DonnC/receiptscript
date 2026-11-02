@@ -8,6 +8,30 @@ import java.nio.CharBuffer
 import java.nio.charset.CodingErrorAction
 import kotlin.math.roundToInt
 import io.github.donnclab.rct.*
+import io.github.donnclab.rct.escpos.EscPosCommands.ALIGN
+import io.github.donnclab.rct.escpos.EscPosCommands.ALIGN_CENTER
+import io.github.donnclab.rct.escpos.EscPosCommands.ALIGN_LEFT
+import io.github.donnclab.rct.escpos.EscPosCommands.ALIGN_RIGHT
+import io.github.donnclab.rct.escpos.EscPosCommands.BOLD
+import io.github.donnclab.rct.escpos.EscPosCommands.CHARACTER_SIZE
+import io.github.donnclab.rct.escpos.EscPosCommands.CUT
+import io.github.donnclab.rct.escpos.EscPosCommands.CUT_PARTIAL
+import io.github.donnclab.rct.escpos.EscPosCommands.ESC
+import io.github.donnclab.rct.escpos.EscPosCommands.FEED_LINES
+import io.github.donnclab.rct.escpos.EscPosCommands.FONT_A
+import io.github.donnclab.rct.escpos.EscPosCommands.FONT_B
+import io.github.donnclab.rct.escpos.EscPosCommands.GS
+import io.github.donnclab.rct.escpos.EscPosCommands.INITIALIZE
+import io.github.donnclab.rct.escpos.EscPosCommands.LF
+import io.github.donnclab.rct.escpos.EscPosCommands.MAX_FEED_LINES
+import io.github.donnclab.rct.escpos.EscPosCommands.OFF
+import io.github.donnclab.rct.escpos.EscPosCommands.ON
+import io.github.donnclab.rct.escpos.EscPosCommands.RASTER_FUNCTION
+import io.github.donnclab.rct.escpos.EscPosCommands.RASTER_IMAGE
+import io.github.donnclab.rct.escpos.EscPosCommands.RASTER_NORMAL_DENSITY
+import io.github.donnclab.rct.escpos.EscPosCommands.SELECT_CODE_TABLE
+import io.github.donnclab.rct.escpos.EscPosCommands.SELECT_FONT
+import io.github.donnclab.rct.escpos.EscPosCommands.UNDERLINE
 
 /**
  * Builds a complete ESC/POS job in memory without touching a device, so template, encoding and
@@ -36,10 +60,9 @@ public class EscPosEncoder(
         require(width <= profile.printableWidthDots && bands.all { it.width == width }) { "Raster bands must share a printable width" }
         require(bands.sumOf { it.height.toLong() } * width <= 16_777_216) { "Raster receipt exceeds pixel budget" }
         val job = Job(null)
-        job.command(27, 64)
+        job.esc(INITIALIZE)
         bands.forEach(job::raster)
-        job.command(27, 100, profile.feedAfterPrint)
-        if (profile.cutAfterPrint) job.command(29, 86, 1)
+        job.finish()
         return job.bytes.toByteArray()
     }
 
@@ -51,11 +74,10 @@ public class EscPosEncoder(
         val requestedColumns = receipt.meta?.width
         require(requestedColumns == null || requestedColumns > 0) { "Receipt width must be positive" }
         val job = Job(requestedColumns)
-        job.command(27, 64)
-        job.command(27, 116, profile.codeTable)
+        job.esc(INITIALIZE)
+        job.esc(SELECT_CODE_TABLE, profile.codeTable)
         receipt.blocks.forEach { job.block(it) }
-        job.command(27, 100, profile.feedAfterPrint)
-        if (profile.cutAfterPrint) job.command(29, 86, 1)
+        job.finish()
         return job.bytes.toByteArray()
     }
 
@@ -69,21 +91,33 @@ public class EscPosEncoder(
         } ?: if (style.size == ReceiptFontSize.BIG) 2 else 1
         val glyph = if (small) profile.fontBWidthDots else profile.fontAWidthDots
         val physicalColumns = (profile.printableWidthDots / (glyph * scale)).coerceAtLeast(1)
-        return Font(if (small) 1 else 0, scale, minOf(physicalColumns, requestedColumns ?: physicalColumns))
+        return Font(if (small) FONT_B else FONT_A, scale, minOf(physicalColumns, requestedColumns ?: physicalColumns))
     }
 
     private inner class Job(private val requestedColumns: Int?) {
         val bytes = ByteArrayOutputStream()
         private fun font(style: ReceiptTextStyle) = this@EscPosEncoder.font(style, requestedColumns)
-        fun command(vararg values: Int) { values.forEach(bytes::write) }
+        fun esc(command: Int, vararg parameters: Int) { bytes.write(ESC); bytes.write(command); parameters.forEach(bytes::write) }
+        fun gs(command: Int, vararg parameters: Int) { bytes.write(GS); bytes.write(command); parameters.forEach(bytes::write) }
+
+        /** Feeds the paper clear of the cutter or tear bar, then cuts if the profile asks for it. */
+        fun finish() {
+            esc(FEED_LINES, profile.feedAfterPrint)
+            if (profile.cutAfterPrint) gs(CUT, CUT_PARTIAL)
+        }
 
         private fun applyStyle(style: ReceiptTextStyle, alignment: ReceiptAlign = ReceiptAlign.LEFT): Font {
             val font = font(style)
-            command(27, 97, alignment.ordinal)
-            command(27, 77, font.selection)
-            command(29, 33, (font.scale - 1) * 17)
-            command(27, 69, if (style.bold) 1 else 0)
-            command(27, 45, if (style.underline) 1 else 0)
+            esc(ALIGN, when (alignment) {
+                ReceiptAlign.LEFT -> ALIGN_LEFT
+                ReceiptAlign.CENTER -> ALIGN_CENTER
+                ReceiptAlign.RIGHT -> ALIGN_RIGHT
+            })
+            esc(SELECT_FONT, font.selection)
+            val magnification = font.scale - 1
+            gs(CHARACTER_SIZE, (magnification shl 4) or magnification)
+            esc(BOLD, if (style.bold) ON else OFF)
+            esc(UNDERLINE, if (style.underline) ON else OFF)
             return font
         }
 
@@ -95,7 +129,7 @@ public class EscPosEncoder(
             }
             val encoded = ByteArray(buffer.remaining()).also(buffer::get)
             bytes.write(encoded)
-            command(10)
+            bytes.write(LF)
         }
 
         fun block(block: ReceiptBlock) {
@@ -135,7 +169,7 @@ public class EscPosEncoder(
                     require(block.lines in 0..10000)
                     applyStyle(ReceiptTextStyle())
                     var remaining = block.lines
-                    while (remaining > 0) { val feed = minOf(remaining, 255); command(27, 100, feed); remaining -= feed }
+                    while (remaining > 0) { val feed = minOf(remaining, MAX_FEED_LINES); esc(FEED_LINES, feed); remaining -= feed }
                 }
                 is ReceiptBlock.Image -> {
                     val image = requireNotNull(images(block.source)) { "Unresolved image: ${block.source}" }
@@ -161,14 +195,14 @@ public class EscPosEncoder(
             var top = 0
             while (top < image.height) {
                 val rows = minOf(profile.rasterSliceHeight, image.height - top)
-                command(29, 118, 48, 0, stride and 255, stride ushr 8, rows and 255, rows ushr 8)
+                gs(RASTER_IMAGE, RASTER_FUNCTION, RASTER_NORMAL_DENSITY, stride and 0xFF, stride ushr 8, rows and 0xFF, rows ushr 8)
                 for (y in top until top + rows) for (xByte in 0 until stride) {
                     var bits = 0
                     for (bit in 0..7) {
                         val x = xByte * 8 + bit
                         if (x < image.width && image.isBlack(x, y)) bits = bits or (128 ushr bit)
                     }
-                    command(bits)
+                    bytes.write(bits)
                 }
                 // Raster commands advance by their own height. Extra LF here introduces slice seams.
                 top += rows

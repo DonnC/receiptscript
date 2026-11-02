@@ -7,8 +7,8 @@ import {HtmlRenderer} from "../web/src/html.js";
 import {repositoryRoot} from "./paths.mjs";
 
 process.chdir(repositoryRoot);
-const source = await readFile("example/src/main/assets/templates/readme/sale.rct", "utf8");
-const data = JSON.parse(await readFile("example/src/main/assets/templates/readme/sale.preview.json", "utf8"));
+const source = await readFile("docs/examples/sale.rct", "utf8");
+const data = JSON.parse(await readFile("docs/examples/sale.preview.json", "utf8"));
 const receipt = new ReceiptScript().compile(source).render(data);
 const receiptHtml = new HtmlRenderer().render(receipt);
 const escape = text => text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
