@@ -21,7 +21,7 @@
     "check:packages": "npm pack --workspace @receiptscript/core --dry-run"
   },
   "devDependencies": {
-    "@vscode/vsce": "^3.6.2",
+    "@vscode/vsce": "^4.1.0",
     "esbuild": "^0.25.0",
     "playwright-core": "^1.64.1",
     "yazl": "^3.3.1",
