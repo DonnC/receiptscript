@@ -1,8 +1,8 @@
 plugins {
     id("com.android.library") version "8.13.2"
     id("com.android.application") version "8.13.2" apply false
-    kotlin("android") version "2.3.20"
-    id("org.jetbrains.kotlin.plugin.compose") version "2.3.20"
+    kotlin("android") version "2.4.21"
+    id("org.jetbrains.kotlin.plugin.compose") version "2.4.21"
     `maven-publish`
 }
 allprojects {
@@ -48,10 +48,10 @@ tasks.withType<Jar>().configureEach {
 dependencies {
     api(platform("androidx.compose:compose-bom:$composeBom"))
     api("androidx.compose.foundation:foundation")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
-    implementation("com.google.zxing:core:3.5.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
+    implementation("com.google.zxing:core:3.5.4")
     testImplementation("junit:junit:4.13.2")
-    testImplementation("org.robolectric:robolectric:4.14.1")
+    testImplementation("org.robolectric:robolectric:4.17")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
     androidTestImplementation("androidx.test:runner:1.7.0")
