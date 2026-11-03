@@ -22,12 +22,12 @@ class ReceiptStudioTest {
         compose.setContent { MaterialTheme { ReceiptStudio(state, engine, onPrint = {}) } }
         compose.onNodeWithText("Preview", useUnmergedTree = true).performClick()
         compose.waitUntil(30_000) { compose.onAllNodesWithText("Preview up to date").fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithText("Print").assertIsEnabled()
+        compose.onNodeWithContentDescription("Print receipt").assertIsEnabled()
         compose.runOnIdle { state.editData("{") }
-        compose.onNodeWithText("Print").assertIsNotEnabled()
+        compose.onNodeWithContentDescription("Print receipt").assertIsNotEnabled()
         compose.runOnIdle { state.editData("{\"total\":20}") }
         compose.waitUntil(30_000) { compose.onAllNodesWithText("Preview up to date").fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithText("Print").assertIsEnabled()
+        compose.onNodeWithContentDescription("Print receipt").assertIsEnabled()
     }
 
     @Test fun propertiesEditTheSourceRatherThanRenderedValues() {
@@ -49,8 +49,8 @@ class ReceiptStudioTest {
         val engine = ReceiptScript(ApplicationProvider.getApplicationContext())
         compose.setContent { MaterialTheme { ReceiptStudio(state, engine) } }
         compose.onNodeWithText("Preview", useUnmergedTree = true).performClick()
-        compose.onNodeWithText("Print").assertDoesNotExist()
-        compose.onNodeWithText("Export").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Print receipt").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Export receipt").assertDoesNotExist()
     }
 
     @Test fun jsonEditorRetainsInvalidDraftsAndFormatsValidData() {
@@ -92,5 +92,70 @@ class ReceiptStudioTest {
         compose.onNodeWithText("Currency field or code").performTextReplacement("USD")
         compose.onNodeWithText("Done").performClick()
         compose.runOnIdle { assertTrue(state.draft.source, state.draft.source.contains("{{total | money:USD}}")) }
+    }
+
+    @Test fun deleteRequiresConfirmationAndCanClearTheLastSectionBlock() {
+        val state = ReceiptStudioState(ReceiptStudioDraft(source, "{\"total\":10}"))
+        val engine = ReceiptScript(ApplicationProvider.getApplicationContext())
+        compose.setContent { MaterialTheme { ReceiptStudio(state, engine) } }
+        compose.onNodeWithContentDescription("Duplicate TOTAL").performClick()
+        compose.runOnIdle { assertEquals(2, state.draft.source.lines().count { it.contains("kv ") }) }
+        compose.onAllNodesWithContentDescription("Delete TOTAL")[0].performClick()
+        compose.onNodeWithText("Cancel").performClick()
+        compose.runOnIdle { assertEquals(2, state.draft.source.lines().count { it.contains("kv ") }) }
+        compose.onAllNodesWithContentDescription("Delete TOTAL")[0].performClick()
+        compose.onNodeWithText("Delete", useUnmergedTree = true).performClick()
+        compose.onNodeWithContentDescription("Delete TOTAL").performClick()
+        compose.onNodeWithText("Delete", useUnmergedTree = true).performClick()
+        compose.runOnIdle { assertFalse(state.draft.source.contains("body:")) }
+    }
+
+    @Test fun currencyUsesTheSameSearchableFieldSheetAsValues() {
+        val state = ReceiptStudioState(ReceiptStudioDraft("receipt \"x\"\nkv \"TOTAL\" \"{{total | money:currency}}\"", "{\"total\":10,\"currency\":\"USD\",\"otherCurrency\":\"ZWG\"}"))
+        val engine = ReceiptScript(ApplicationProvider.getApplicationContext())
+        compose.setContent { MaterialTheme { ReceiptStudio(state, engine) } }
+        compose.onNodeWithText("TOTAL").performClick()
+        compose.onNodeWithContentDescription("Choose Currency field or code data field").performClick()
+        compose.onNodeWithText("Search fields").performTextReplacement("otherCurrency")
+        compose.onNode(hasText("otherCurrency") and !hasSetTextAction()).performClick()
+        compose.onNodeWithText("Done").performClick()
+        compose.runOnIdle { assertTrue(state.draft.source.contains("money:otherCurrency")) }
+    }
+
+    @Test fun footerCanBeCreatedAndEditedIndependently() {
+        val state = ReceiptStudioState(ReceiptStudioDraft("receipt \"x\"\nleft \"Body\"", "{}"))
+        val engine = ReceiptScript(ApplicationProvider.getApplicationContext())
+        compose.setContent { MaterialTheme { ReceiptStudio(state, engine) } }
+        compose.onNodeWithContentDescription("Add Footer block").performClick()
+        compose.onNodeWithText("Text", useUnmergedTree = true).performClick()
+        compose.runOnIdle { assertTrue(state.draft.source.contains("footer:")); assertTrue(state.draft.source.contains("left \"Body\"")) }
+        compose.onNodeWithContentDescription("Edit Footer section").performClick()
+        compose.onNodeWithText("Edit Footer").assertExists()
+    }
+
+    @Test fun previewUsesSliderAndIconActionsInsteadOfFitWidth() {
+        val state = ReceiptStudioState(ReceiptStudioDraft(source, "{\"total\":10}"))
+        val engine = ReceiptScript(ApplicationProvider.getApplicationContext())
+        compose.setContent { MaterialTheme { ReceiptStudio(state, engine, onExport = {}) } }
+        compose.onNodeWithText("Preview", useUnmergedTree = true).performClick()
+        compose.onNodeWithText("Fit width").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Receipt zoom").assertExists()
+        compose.onNodeWithContentDescription("Export receipt").assertExists()
+    }
+
+    @Test fun draggingAcrossTwoRowsCommitsOneUndoableReorder() {
+        val state = ReceiptStudioState(ReceiptStudioDraft("receipt \"drag\"\nbody:\n  kv \"FIRST\" \"1\"\n  kv \"SECOND\" \"2\"\n  kv \"THIRD\" \"3\"", "{}"))
+        val original = state.draft.source
+        val engine = ReceiptScript(ApplicationProvider.getApplicationContext())
+        compose.setContent { MaterialTheme { ReceiptStudio(state, engine) } }
+        val first = compose.onNodeWithContentDescription("Drag to reorder FIRST", useUnmergedTree = true)
+        val distance = compose.onNodeWithContentDescription("Drag to reorder THIRD", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot.center.y -
+            first.fetchSemanticsNode().boundsInRoot.center.y
+        first.performTouchInput { swipe(center, center + androidx.compose.ui.geometry.Offset(0f, distance), 800) }
+        compose.runOnIdle {
+            assertTrue(state.draft.source, state.draft.source.indexOf("THIRD") < state.draft.source.indexOf("FIRST"))
+            state.undo()
+            assertEquals(original, state.draft.source)
+        }
     }
 }

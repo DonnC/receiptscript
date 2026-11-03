@@ -17,6 +17,9 @@ changes; each one is listed with a migration note.
 
 ### Fixed
 
+- Smooth screen previews reuse core layout without changing thermal raster output. Studio adds
+  live drag reordering, independent section editing, confirmed deletion, searchable binding sheets,
+  icon save/output actions and slider zoom. The example keeps system bars visible and readable.
 - Numeric overflow in template source is reported as a lint diagnostic rather than escaping the linter.
 - Studio mobile layout now follows the section-based design, with compact block rows, native
   switches, a pinned Done action and advanced tools moved into menus. Simple bindings expose

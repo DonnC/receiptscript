@@ -46,11 +46,16 @@ Simple bindings have a field picker based on the current JSON and native formatt
 including currency for money. Composite text and advanced filter chains remain editable as
 expressions and are never silently reduced to a simple binding. Core parses and writes bindings.
 
-The Add block sheet provides a block grid and section/container selector. Move up/down and
-duplicate/delete are in the property sheet's actions menu. Core validates each operation before committing it. For example,
-deleting the only child of a required block is rejected, as is adding a footer inside a table.
-Hold the Move handle and drag up/down to move one sibling position, or use the accessible
-move actions in properties. **Studio options > Template settings** exposes core metadata, including base font, font scaling
+The Add block sheet provides a block grid and section/container selector. Each block has
+duplicate/delete icons; deletion asks for confirmation. Drag its handle to reorder siblings,
+with live placement and edge scrolling, or use the accessible move actions in properties.
+Core validates each operation before committing it. Deleting the only child of a required
+condition or loop is rejected; deleting the last local section block clears that optional section.
+Each section has independent Add and Edit actions. Header/footer references can be configured
+there or explicitly copied into local editable blocks, without changing the shared repository template.
+Bindable fields share a searchable data-field bottom sheet, including currency, array paths and
+the selected block's loop aliases. Fields are refreshed from the current sample JSON.
+**Studio options > Template settings** exposes core metadata, including base font, font scaling
 and character columns; blank values inherit core defaults. Use **Studio options > Template source** for comments and
 complete `.rct` editing.
 
@@ -62,7 +67,7 @@ Sample data is bounded to 262,144 characters and 64 nesting levels. There is no 
 or static binding type checker: actual binding and rendering errors come from core.
 
 **Preview** displays the core `Receipt` with `ReceiptPreview`. Studio does not draw a second
-receipt layout. It updates after a brief debounce, offers zoom, and forwards that same receipt
+receipt layout. It updates after a brief debounce, offers a bottom zoom slider and icon output actions, and forwards that same receipt
 to the supplied print/export callback. An old preview is visibly out of date and cannot be
 printed or exported as the current draft. Driver failures are surfaced without automatic retries.
 

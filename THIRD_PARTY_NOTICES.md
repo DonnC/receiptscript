@@ -10,7 +10,7 @@ licenses; do not remove required notices from redistributed artifacts.
 | Kotlin standard library | Kotlin runtime | Apache-2.0, https://github.com/JetBrains/kotlin |
 | ZXing core | Android and ESC/POS QR/barcode encoding | Apache-2.0, https://github.com/zxing/zxing |
 | AndroidX Compose | In-app receipt preview | Apache-2.0, https://android.googlesource.com/platform/frameworks/support/ |
-| Material Design icons | "print" and "arrow back" vector icons in the example app | Apache-2.0, https://github.com/google/material-design-icons |
+| Material Design icons | Print, edit and navigation vector icons in the example app | Apache-2.0, https://github.com/google/material-design-icons |
 | Kotlin coroutines | Background rendering and suspending printer integration | Apache-2.0, https://github.com/Kotlin/kotlinx.coroutines |
 | Kotlin serialization | Strict JSON sample-data editing in the optional Studio module | Apache-2.0, https://github.com/Kotlin/kotlinx.serialization |
 | Gradle wrapper | Reproducible builds | Apache-2.0, https://github.com/gradle/gradle |

@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.SystemBarStyle
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -34,7 +35,13 @@ import kotlinx.coroutines.withContext
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        // The example deliberately uses a light theme, even when the phone is in dark mode.
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT)
+        )
+        androidx.core.view.WindowCompat.getInsetsController(window, window.decorView)
+            .show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
         setContent {
             val printer = remember { connectedPrinter(this@MainActivity) }
             StarterTheme { ReceiptGallery(printer) }

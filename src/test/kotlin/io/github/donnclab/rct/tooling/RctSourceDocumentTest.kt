@@ -4,6 +4,32 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class RctSourceDocumentTest {
+    @Test fun `reorder can move across several sibling slots without moving other sections`() {
+        val document = RctSourceDocument.parse("receipt \"x\"\nleft \"A\"\nuse footer \"f\"\nleft \"B\"\nleft \"C\"")
+        val rows = document.nodes.filter { it.statement.startsWith("left ") }
+        val reordered = document.reorder(listOf(rows[2], rows[0], rows[1]))
+        assertEquals(listOf("left \"C\"", "left \"A\"", "left \"B\""), reordered.nodes.filter { it.statement.startsWith("left ") }.map { it.statement })
+        assertEquals("use footer \"f\"", reordered.nodes[2].statement)
+    }
+
+    @Test fun `independent sections can be created replaced and cleared`() {
+        val document = RctSourceDocument.parse("receipt \"x\"\nleft \"Body\"")
+        val header = document.withSection("header", "center \"Shop\"")
+        assertEquals("center \"Shop\"", header.sectionSource("header").trim())
+        assertTrue(header.source.contains("left \"Body\""))
+        val footer = header.withSection("footer", "center \"Thanks\"")
+        assertTrue(footer.source.contains("footer:"))
+        val cleared = footer.withSection("header", "")
+        assertFalse(cleared.source.contains("header:"))
+        assertTrue(cleared.source.contains("footer:"))
+    }
+
+    @Test fun `localising a section can remove references without changing body data`() {
+        val document = RctSourceDocument.parse("receipt \"x\"\nuse header \"shared\"\nkv \"TOTAL\" \"{{total}}\"")
+        val local = document.withSection("header", "center \"Brand\"", emptyList())
+        assertFalse(local.source.contains("use header"))
+        assertTrue(local.source.contains("{{total}}"))
+    }
     private val source = "receipt \"sale\"\r\n# Keep this comment\r\nuse footer \"shared\"\r\nbody:\r\n  center bold \"{{merchant.name}}\" 24\r\n  if txn.total:\r\n    kv \"TOTAL\" \"{{txn.total | money:txn.currency}}\"\r\n  spacer 1\r\n"
 
     @Test fun `opening a document is lossless`() {

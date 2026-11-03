@@ -18,7 +18,8 @@ public class Receipt internal constructor(
     /** Width of every band, in printer dots. Equal to [ReceiptOptions.width]. */
     public val width: Int,
     bands: List<Bitmap>,
-    internal val images: Map<String, Bitmap>
+    internal val images: Map<String, Bitmap>,
+    internal val displayList: ReceiptDisplayList? = null
 ) {
     /** The name declared by `receipt "<name>"` in the template. */
     public val name: String get() = document.name

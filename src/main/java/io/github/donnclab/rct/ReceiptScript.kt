@@ -43,6 +43,10 @@ public class ReceiptScript(
     private val renderer = AndroidReceiptRenderer(context.applicationContext, options)
     private val printLock = Mutex()
 
+    /** Loads raw source through this instance's repository, including reusable header/footer fragments. */
+    public suspend fun templateSource(templateId: String, args: Map<String, Any?> = emptyMap()): String =
+        withContext(Dispatchers.IO) { templates.getTemplate(templateId, args) }
+
     /**
      * Loads template [templateId] from the repository and binds [data] to it.
      *

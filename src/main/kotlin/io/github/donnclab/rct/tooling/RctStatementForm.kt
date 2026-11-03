@@ -19,7 +19,11 @@ public data class RctSourceProperty(
  */
 public class RctStatementForm private constructor(
     public val properties: List<RctSourceProperty>,
-    private val encode: (Map<String, String>) -> String
+    private val encode: (Map<String, String>) -> String,
+    /** Properties whose values are template strings, rather than literal settings. */
+    public val bindingProperties: Set<String>,
+    /** Properties that address context data directly, without interpolation braces. */
+    public val pathProperties: Set<String>
 ) {
     public fun write(values: Map<String, String>): String = encode(
         properties.associate { it.key to it.value } + values
@@ -134,7 +138,14 @@ public class RctStatementForm private constructor(
                     }
                 }
             }
-            return RctStatementForm(fields, writer)
+            val bindings = when (kind) {
+                "text", "left", "center", "right" -> setOf("value")
+                "kv" -> setOf("label", "value")
+                "image", "qr", "barcode" -> setOf("content")
+                "row", "headers" -> setOf("columns")
+                else -> emptySet()
+            }
+            return RctStatementForm(fields, writer, bindings, if (kind in setOf("if", "for")) setOf("path") else emptySet())
         }
     }
 }

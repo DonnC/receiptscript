@@ -80,33 +80,28 @@ private val formatters = listOf("" to "None", "money" to "Money", "date" to "Dat
 
 /** Advanced/composite expressions stay intact; simple bindings get the familiar field/format UI. */
 @Composable
-internal fun StudioValueField(label: String, initial: String, dataJson: String, onChange: (String) -> Unit, onError: (String?) -> Unit) {
+internal fun StudioValueField(label: String, initial: String, fields: List<StudioDataField>, onChange: (String) -> Unit, onError: (String?) -> Unit) {
     var binding by remember { mutableStateOf(RctBindingForm.read(initial)?.takeIf { it.filters.size <= 1 && (it.filters.isEmpty() || formatters.any { option -> option.first == it.filters[0].name }) }) }
     var literal by remember { mutableStateOf(initial) }
-    val paths = remember(dataJson) { runCatching { samplePaths(StudioJson.parse(dataJson)) }.getOrDefault(emptyList()) }
-    var picking by remember { mutableStateOf(false) }
+    var lastEmitted by remember { mutableStateOf(initial) }
+    LaunchedEffect(initial) {
+        if (initial != lastEmitted) {
+            binding = RctBindingForm.read(initial)?.takeIf { it.filters.size <= 1 && (it.filters.isEmpty() || formatters.any { option -> option.first == it.filters[0].name }) }
+            literal = initial
+            lastEmitted = initial
+            onError(null)
+        }
+    }
     fun update(next: RctSourceBinding) {
         binding = next
-        try { onChange(RctBindingForm.write(next)); onError(null) }
+        try { lastEmitted = RctBindingForm.write(next); onChange(lastEmitted); onError(null) }
         catch (failure: IllegalArgumentException) { onError(failure.message) }
     }
     val current = binding
-    Box {
-        OutlinedTextField(current?.path ?: literal, {
-            if (current != null) update(current.copy(path = it)) else { literal = it; onChange(it) }
-        }, label = { Text(if (current != null) "$label field" else label, style = MaterialTheme.typography.bodySmall) },
-            leadingIcon = if (current != null) ({ StudioIcon(StudioSymbol.LINK) }) else null,
-            trailingIcon = { IconButton(onClick = { picking = true }) { StudioIcon(StudioSymbol.LINK, "Choose $label data field") } },
-            singleLine = true, textStyle = MaterialTheme.typography.bodyMedium, shape = MaterialTheme.shapes.small,
-            keyboardOptions = KeyboardOptions(autoCorrectEnabled = false), modifier = Modifier.fillMaxWidth())
-        DropdownMenu(picking, { picking = false }) {
-            if (current != null) DropdownMenuItem(text = { Text("Use plain text instead") }, onClick = {
-                literal = ""; binding = null; onChange(""); onError(null); picking = false
-            })
-            if (paths.isEmpty()) DropdownMenuItem(text = { Text("Add fields in the Data tab first") }, onClick = { picking = false })
-            paths.forEach { path -> DropdownMenuItem(text = { Text(path) }, onClick = { update((current ?: RctSourceBinding(path)).copy(path = path)); picking = false }) }
-        }
-    }
+    StudioReferenceField(label, current?.path ?: literal, fields, {
+        if (current != null) update(current.copy(path = it)) else { literal = it; lastEmitted = it; onChange(it) }
+    }, reference = current != null, onSelect = { path -> update((current ?: RctSourceBinding(path)).copy(path = path)) },
+        onLiteral = if (current == null) null else ({ literal = ""; binding = null; lastEmitted = ""; onChange(""); onError(null) }))
     if (current != null) {
         val filter = current.filters.firstOrNull()
         val formatter = filter?.name.orEmpty()
@@ -114,7 +109,7 @@ internal fun StudioValueField(label: String, initial: String, dataJson: String, 
             StudioDropdown("Formatter", formatter, formatters, { chosen ->
                 update(current.copy(filters = if (chosen.isEmpty()) emptyList() else listOf(RctSourceFilter(chosen))))
             }, Modifier.weight(1f))
-            if (formatter == "money") StudioField("Currency field or code", filter!!.args.firstOrNull().orEmpty(), { currency ->
+            if (formatter == "money") StudioReferenceField("Currency field or code", filter!!.args.firstOrNull().orEmpty(), fields, { currency ->
                 update(current.copy(filters = listOf(filter.copy(args = if (currency.isBlank()) emptyList() else listOf(currency)))))
             }, Modifier.weight(1f))
         }
@@ -123,26 +118,13 @@ internal fun StudioValueField(label: String, initial: String, dataJson: String, 
             TextButton(onClick = { advanced = !advanced }, contentPadding = PaddingValues(0.dp)) { Text("Custom date formats") }
             if (advanced) {
                 val args = filter!!.args
-                StudioField("Output format (optional)", args.getOrNull(0).orEmpty(), { value ->
+                StudioReferenceField("Output format (optional)", args.getOrNull(0).orEmpty(), fields, { value ->
                     update(current.copy(filters = listOf(filter.copy(args = listOf(value) + args.drop(1)))))
                 })
-                StudioField("Input format (optional)", args.getOrNull(1).orEmpty(), { value ->
+                StudioReferenceField("Input format (optional)", args.getOrNull(1).orEmpty(), fields, { value ->
                     update(current.copy(filters = listOf(filter.copy(args = listOf(args.firstOrNull().orEmpty(), value)))))
                 })
             }
         }
     }
-}
-
-private fun samplePaths(value: Map<String, Any?>): List<String> {
-    val paths = mutableListOf<String>()
-    fun visit(map: Map<*, *>, prefix: String) {
-        map.forEach { (key, child) ->
-            if (paths.size >= 100) return
-            val path = if (prefix.isEmpty()) key.toString() else "$prefix.$key"
-            if (child is Map<*, *>) visit(child, path) else paths += path
-        }
-    }
-    visit(value, "")
-    return paths
 }

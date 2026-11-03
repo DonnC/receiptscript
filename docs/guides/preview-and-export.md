@@ -1,7 +1,7 @@
 # Preview and export
 
-A `Receipt` is laid out once. The preview, every export and raster printing all use the same pixels,
-so a receipt that looks right on screen prints the same way.
+A `Receipt` is laid out once. The screen preview uses that recorded layout with smooth text;
+exports and raster printing retain the quantized printer pixels. Spacing and geometry are shared.
 
 ## Preview in Compose
 
@@ -10,9 +10,10 @@ val receipt by produceState<Receipt?>(null, sale) { value = receipts.render("sal
 receipt?.let { ReceiptPreview(it, Modifier.width(280.dp)) }
 ```
 
-`ReceiptPreview` only draws. It scales the receipt to the available width without smoothing, so thin
-lines stay sharp. Give it a fixed or maximum width: a 384-dot receipt shown full-width on a tablet
-looks enormous.
+`ReceiptPreview` only draws. Its default `SMOOTH` mode redraws text at screen resolution rather
+than enlarging low-resolution printer dots. For hardware diagnostics, pass
+`mode = ReceiptPreviewMode.THERMAL` to inspect the actual raster pixels without smoothing.
+Give it a fixed or maximum width: a 384-dot receipt shown full-width on a tablet looks enormous.
 
 ### Android Studio previews
 

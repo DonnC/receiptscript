@@ -16,7 +16,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 
-internal enum class StudioSymbol { BACK, UNDO, REDO, MORE, CHECK, CHEVRON, ADD, MINUS, TEXT, TABLE, IMAGE, QR, BARCODE, LINK, SPACE, LINE, VALUE, CLOSE, EXPAND }
+internal enum class StudioSymbol { BACK, UNDO, REDO, MORE, CHECK, CHEVRON, ADD, MINUS, TEXT, TABLE, IMAGE, QR, BARCODE, LINK, SPACE, LINE, VALUE, CLOSE, EXPAND, SAVE, EXPORT, PRINT, DUPLICATE, DELETE, EDIT, ZOOM }
 
 /** Small, theme-coloured geometric glyphs; no icon font or expanded icon dependency. */
 @Composable
@@ -51,6 +51,13 @@ internal fun StudioIcon(symbol: StudioSymbol, description: String? = null, modif
                 StudioSymbol.SPACE -> { line(4f,4f,20f,4f); line(4f,20f,20f,20f); line(12f,7f,12f,17f); line(9f,9f,12f,6f); line(12f,6f,15f,9f); line(9f,15f,12f,18f); line(12f,18f,15f,15f) }
                 StudioSymbol.LINE -> line(3f,12f,21f,12f)
                 StudioSymbol.VALUE -> { line(4f,7f,10f,7f); line(15f,7f,20f,7f); line(4f,17f,10f,17f); line(15f,17f,20f,17f) }
+                StudioSymbol.SAVE -> { box(4f,3f,16f,18f); box(8f,3f,8f,6f); box(8f,14f,8f,7f) }
+                StudioSymbol.EXPORT -> { line(5f,13f,5f,21f); line(5f,21f,20f,21f); line(20f,21f,20f,13f); line(12f,16f,12f,3f); line(12f,3f,7f,8f); line(12f,3f,17f,8f) }
+                StudioSymbol.PRINT -> { box(3f,8f,18f,10f); box(6f,3f,12f,5f); box(6f,14f,12f,7f) }
+                StudioSymbol.DUPLICATE -> { box(8f,8f,13f,13f); line(4f,16f,4f,3f); line(4f,3f,17f,3f) }
+                StudioSymbol.DELETE -> { box(6f,7f,12f,14f); line(4f,6f,20f,6f); line(9f,3f,15f,3f); line(10f,10f,10f,18f); line(14f,10f,14f,18f) }
+                StudioSymbol.EDIT -> { line(5f,17f,17f,5f); line(8f,20f,20f,8f); line(17f,5f,20f,8f); line(5f,17f,4f,21f); line(4f,21f,8f,20f) }
+                StudioSymbol.ZOOM -> { drawCircle(color,7f,Offset(10f,10f),style=stroke); line(15f,15f,21f,21f) }
             }
         }
     }

@@ -63,7 +63,9 @@ fun ReceiptGalleryScreen(
                 },
                 actions = {
                     if (example != null) {
-                        if (onEdit != null) TextButton(onClick = onEdit, enabled = state.sample != null) { Text("Edit") }
+                        if (onEdit != null) IconButton(onClick = onEdit, enabled = state.sample != null) {
+                            Icon(painterResource(R.drawable.ic_edit), contentDescription = "Edit receipt")
+                        }
                         PrintAction(state, onPrint)
                     }
                 },

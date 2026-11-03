@@ -24,7 +24,9 @@ internal fun StudioProperties(
     onPickImage: (suspend () -> String?)?,
     modifier: Modifier = Modifier,
     dataJson: String = "{}",
-    onDismiss: (() -> Unit)? = null
+    onDismiss: (() -> Unit)? = null,
+    onDelete: (RctSourceNode) -> Unit = {},
+    onLocalize: ((String) -> Unit)? = null
 ) {
     val form = remember(node) { RctStatementForm.read(node.statement) }
     val values = remember(node) { mutableStateMapOf<String, String>().apply { form.properties.forEach { put(it.key, it.value) } } }
@@ -35,6 +37,7 @@ internal fun StudioProperties(
     var actions by remember(node) { mutableStateOf(false) }
     val fieldErrors = remember(node) { mutableStateMapOf<String, String>() }
     val table = remember(node) { if (node.statement == "table:") StudioTableDraft(document, node) else null }
+    val fields = remember(dataJson, document, node) { runCatching { studioDataFields(StudioJson.parse(dataJson), document, node) }.getOrDefault(emptyList()) }
     fun change(action: () -> RctSourceDocument) {
         try {
             val next = action()
@@ -51,7 +54,7 @@ internal fun StudioProperties(
                     listOf("Move up" to { change { document.move(node, -1) } },
                         "Move down" to { change { document.move(node, 1) } },
                         "Duplicate" to { change { document.duplicate(node) } },
-                        "Delete block" to { change { document.remove(node) } }).forEach { (label, action) ->
+                        "Delete block" to { onDelete(node) }).forEach { (label, action) ->
                         DropdownMenuItem(text = { Text(label) }, onClick = { actions = false; action() })
                     }
                 }
@@ -59,15 +62,18 @@ internal fun StudioProperties(
             if (onDismiss != null) IconButton(onClick = onDismiss) { StudioIcon(StudioSymbol.CLOSE, "Close properties") }
         }
         Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        if (table != null) TableProperties(table)
+        if (table != null) TableProperties(table, fields, { key, failure -> if (failure == null) fieldErrors.remove(key) else fieldErrors[key] = failure })
         form.properties.sortedBy { when (it.key) { "bold", "underline" -> 2; "font" -> 1; else -> 0 } }.forEach { property -> key(node, property.key) {
             val value = values.getValue(property.key)
             val changeValue: (String) -> Unit = { values[property.key] = it }
             when {
                 property.choices.toSet() == setOf("true", "false") -> StudioToggle(property.label, value == "true", { changeValue(it.toString()) })
-                property.key == "value" || property.key == "content" -> StudioValueField(
-                    if (property.key == "content") "Content" else if (node.statement.startsWith("kv ")) "Value" else "Text",
-                    property.value, dataJson, changeValue, { failure -> if (failure == null) fieldErrors.remove(property.key) else fieldErrors[property.key] = failure })
+                property.key in form.bindingProperties && property.multiline -> StudioCellsField(value, fields, changeValue,
+                    { failure -> if (failure == null) fieldErrors.remove(property.key) else fieldErrors[property.key] = failure })
+                property.key in form.bindingProperties -> StudioValueField(
+                    if (property.key == "label") "Label" else if (property.key == "content") "Content" else if (node.statement.startsWith("kv ")) "Value" else "Text",
+                    value, fields, changeValue, { failure -> if (failure == null) fieldErrors.remove(property.key) else fieldErrors[property.key] = failure })
+                property.key in form.pathProperties -> StudioReferenceField(property.label, value, fields.filterNot { '[' in it.path }, changeValue)
                 property.choices.isNotEmpty() && property.choices.size <= 4 -> StudioChoices(if (property.key == "style") "Text size" else property.label, value, property.choices, changeValue)
                 property.choices.isNotEmpty() -> StudioDropdown(property.label, value, property.choices.map { it to it.uppercase() }, changeValue)
                 else -> StudioField(if (property.key == "font") "Size in dots (optional)" else property.label, value, changeValue,
@@ -75,6 +81,11 @@ internal fun StudioProperties(
                     placeholder = if (property.key == "font") "Automatic" else null)
             }
         } }
+        if (node.statement.startsWith("use ") && onLocalize != null) {
+            Text("This section comes from another template. Make a local copy to edit its blocks here without changing the shared original.", style = MaterialTheme.typography.bodySmall)
+            OutlinedButton(onClick = { onLocalize(if (node.statement.startsWith("use header")) "header" else "footer") },
+                enabled = values["id"] == form.properties.firstOrNull { it.key == "id" }?.value) { Text("Edit local copy") }
+        }
         if (node.statement.startsWith("image ") && onPickImage != null) {
             OutlinedButton(onClick = {
                 scope.launch {
@@ -131,8 +142,13 @@ internal class StudioTableDraft(document: RctSourceDocument, node: RctSourceNode
 }
 
 @Composable
-private fun TableProperties(state: StudioTableDraft) {
-    StudioToggle("Show column headings", state.showHeaders, { state.showHeaders = it })
+private fun TableProperties(state: StudioTableDraft, fields: List<StudioDataField>, onError: (String, String?) -> Unit) {
+    val headingErrors = remember(state) { mutableStateMapOf<StudioTableColumn, String>() }
+    fun reportHeadings() = onError("headings", headingErrors.values.firstOrNull())
+    StudioToggle("Show column headings", state.showHeaders, {
+        state.showHeaders = it
+        if (!it) { headingErrors.clear(); reportHeadings() }
+    })
     StudioToggle("Equal column widths", state.equalWidths, { state.equalWidths = it })
     StudioToggle("Default alignment (centre)", state.defaultAlignment, { state.defaultAlignment = it })
     state.columns.forEachIndexed { index, column ->
@@ -140,9 +156,12 @@ private fun TableProperties(state: StudioTableDraft) {
             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Column ${index + 1}", Modifier.weight(1f), style = MaterialTheme.typography.labelLarge)
-                    if (state.columns.size > 2) IconButton(onClick = { state.columns.removeAt(index) }) { StudioIcon(StudioSymbol.CLOSE, "Remove column ${index + 1}") }
+                    if (state.columns.size > 2) IconButton(onClick = { state.columns.remove(column); headingErrors.remove(column); reportHeadings() }) { StudioIcon(StudioSymbol.CLOSE, "Remove column ${index + 1}") }
                 }
-                if (state.showHeaders) StudioField("Heading", column.heading, { column.heading = it })
+                if (state.showHeaders) key(column) { StudioValueField("Heading", column.heading, fields, { column.heading = it }, {
+                    if (it == null) headingErrors.remove(column) else headingErrors[column] = it
+                    reportHeadings()
+                }) }
                 if (!state.equalWidths) StudioField("Relative width", column.width, { column.width = it }, numeric = true)
                 if (!state.defaultAlignment) StudioDropdown("Alignment", column.alignment.name,
                     ReceiptColumnAlign.entries.map { it.name to when (it) { ReceiptColumnAlign.START -> "Left"; ReceiptColumnAlign.CENTER -> "Centre"; ReceiptColumnAlign.END -> "Right" } },
@@ -152,6 +171,26 @@ private fun TableProperties(state: StudioTableDraft) {
     }
     OutlinedButton(onClick = { state.columns.add(StudioTableColumn("Column ${state.columns.size + 1}", "1", ReceiptColumnAlign.CENTER)) }, shape = MaterialTheme.shapes.small) { Text("Add column") }
     Text("Keep row cells in the same order as these columns.", style = MaterialTheme.typography.bodySmall)
+}
+
+@Composable
+private fun StudioCellsField(value: String, fields: List<StudioDataField>, onChange: (String) -> Unit, onError: (String?) -> Unit) {
+    class Cell(initial: String) { var text by mutableStateOf(initial) }
+    val cells = remember { mutableStateListOf<Cell>().apply { value.lines().forEach { add(Cell(it)) } } }
+    val errors = remember { mutableStateMapOf<Cell, String>() }
+    cells.forEachIndexed { index, cell -> key(cell) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Column ${index + 1}", Modifier.weight(1f), style = MaterialTheme.typography.labelMedium)
+                if (cells.size > 2) IconButton(onClick = { cells.remove(cell); errors.remove(cell); onError(errors.values.firstOrNull()); onChange(cells.joinToString("\n") { it.text }) }) {
+                    StudioIcon(StudioSymbol.CLOSE, "Remove cell ${index + 1}")
+                }
+            }
+            StudioValueField("Cell value", cell.text, fields, { next -> cell.text = next; onChange(cells.joinToString("\n") { it.text }) },
+                { failure -> if (failure == null) errors.remove(cell) else errors[cell] = failure; onError(errors.values.firstOrNull()) })
+        }
+    } }
+    OutlinedButton(onClick = { cells.add(Cell("")); onChange(cells.joinToString("\n") { it.text }) }) { Text("Add column") }
 }
 
 internal fun blockTitle(statement: String): String = when (statement.substringBefore(' ').removeSuffix(":")) {

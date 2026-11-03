@@ -70,6 +70,52 @@ public class RctSourceDocument private constructor(
         return parse(source.replaceRange(node.end, node.end, prefix + block))
     }
 
+    /** Reorders the supplied sibling blocks in their existing slots, leaving other source intact. */
+    public fun reorder(order: List<RctSourceNode>): RctSourceDocument {
+        order.forEach(::checkNode)
+        require(order.map { it.id }.distinct().size == order.size) { "A block can only appear once." }
+        require(order.map { it.parentId }.distinct().size <= 1) { "Reorder blocks within one container." }
+        if (order.size < 2) return this
+        val slots = order.sortedBy { it.start }
+        var edited = source
+        slots.indices.reversed().forEach { index ->
+            val block = source.substring(order[index].start, order[index].end)
+            val terminated = if (block.endsWith('\n') || slots[index].end == source.length) block else block + newline
+            edited = edited.replaceRange(slots[index].start, slots[index].end, terminated)
+        }
+        return parse(edited)
+    }
+
+    /** Local contents in core print order; shared references remain separate repository entries. */
+    public fun sectionSource(section: String): String {
+        require(section in setOf("header", "body", "footer"))
+        val roots = nodes.filter { it.parentId == null }
+        fun contents(node: RctSourceNode): String = blockSource(node).lines().drop(1).joinToString("\n") { it.removePrefix("  ") }
+        return if (section == "body") roots.filter(::isBodyRoot).joinToString("\n") {
+            if (it.statement == "body:") contents(it) else blockSource(it)
+        } else roots.firstOrNull { it.statement == "$section:" }?.let(::contents).orEmpty()
+    }
+
+    /** Edits one first-class section. Null [references] preserves its existing shared references. */
+    public fun withSection(section: String, contents: String, references: List<String>? = null): RctSourceDocument {
+        require(section in setOf("header", "body", "footer"))
+        require(section != "body" || references.isNullOrEmpty()) { "Body sections cannot reference a shared header/footer." }
+        val roots = nodes.filter { it.parentId == null }
+        val removed = roots.filter { node ->
+            (if (section == "body") isBodyRoot(node) else node.statement == "$section:") ||
+                (references != null && node.statement.startsWith("use $section "))
+        }
+        var edited = source
+        removed.sortedByDescending { it.start }.forEach { edited = edited.removeRange(it.start, it.end) }
+        if (edited.isNotEmpty() && !edited.endsWith('\n')) edited += newline
+        if (contents.isNotBlank()) edited += "$section:" + newline + indent(contents, 1)
+        references?.forEach { id -> edited += "use $section \"$id\"" + newline }
+        return parse(edited)
+    }
+
+    private fun isBodyRoot(node: RctSourceNode): Boolean = !node.statement.startsWith("receipt ") &&
+        !node.statement.startsWith("use ") && node.statement !in setOf("meta:", "header:", "footer:")
+
     /** Updates only a table's configuration lines. Null restores the core default. */
     public fun withTableOptions(
         node: RctSourceNode,

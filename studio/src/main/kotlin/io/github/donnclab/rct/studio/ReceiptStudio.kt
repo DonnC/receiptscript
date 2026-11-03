@@ -1,11 +1,8 @@
 package io.github.donnclab.rct.studio
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
@@ -13,10 +10,6 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.graphics.compositeOver
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -71,6 +64,8 @@ fun ReceiptStudio(
     var rendering by remember { mutableStateOf(false) }
     var previewError by remember { mutableStateOf<String?>(null) }
     var dataError by remember { mutableStateOf<String?>(null) }
+    var deleting by remember { mutableStateOf<RctSourceNode?>(null) }
+    var sectionEditor by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     val draft = state.draft
     val document = remember(draft.source) { runCatching { RctSourceDocument.parse(draft.source) }.getOrNull() }
@@ -103,6 +98,21 @@ fun ReceiptStudio(
         state.editSource(next.source)
         selection = null
     }
+    fun localize(section: String) {
+        val original = document ?: return
+        scope.launch {
+            try {
+                val references = original.nodes.filter { it.parentId == null && it.statement.startsWith("use $section ") }
+                val fragments = references.map { receiptScript.templateSource(RctStatementForm.read(it.statement).properties.single().value, args) }
+                val local = original.sectionSource(section)
+                val pieces = if (section == "header") fragments + local else listOf(local) + fragments
+                check(state.draft.source == original.source) { "The template changed while loading the shared section. Please try again." }
+                commit(original.withSection(section, pieces.filter { it.isNotBlank() }.joinToString("\n"), emptyList()))
+                sectionEditor = null
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (failure: Exception) { message = failure.message ?: "Could not load this shared section." }
+        }
+    }
     fun output(action: suspend (Receipt) -> Unit) {
         val receipt = ready ?: return
         scope.launch {
@@ -129,7 +139,7 @@ fun ReceiptStudio(
                     if (onClose != null) IconButton(enabled = !saving && !outputBusy, onClick = { if (state.isDirty) closing = true else onClose() }) { StudioIcon(StudioSymbol.BACK, "Back") }
                 },
                 actions = {
-                    if (onSave != null) Button(shape = MaterialTheme.shapes.small, contentPadding = PaddingValues(horizontal = 16.dp),
+                    if (onSave != null) FilledIconButton(
                         enabled = !saving && document != null && state.isDirty, onClick = {
                         val snapshot = state.draft
                         scope.launch {
@@ -139,7 +149,7 @@ fun ReceiptStudio(
                             catch (failure: Exception) { message = failure.message ?: "Saving failed. Your edits are still here." }
                             finally { saving = false }
                         }
-                    }) { Text("Save") }
+                    }) { StudioIcon(StudioSymbol.SAVE, "Save template") }
                     Box {
                         IconButton(onClick = { menu = true }) { StudioIcon(StudioSymbol.MORE, "Studio options") }
                         DropdownMenu(menu, { menu = false }) {
@@ -152,7 +162,7 @@ fun ReceiptStudio(
             )
         }
     ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding)) {
+        Column(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding)) {
             PrimaryTabRow(selectedTabIndex = tab) {
                 listOf("Design", "Data", "Preview").forEachIndexed { index, name ->
                     Tab(selected = tab == index, onClick = { tab = index }, text = { Text(name) })
@@ -190,10 +200,12 @@ fun ReceiptStudio(
                             } else {
                                 Outline(document, selection, { selection = it.id }, { section ->
                                     addParent = section.container?.id; addSection = section.title; adding = true; addError = null
-                                }, { node, direction ->
-                                    try { commit(document.move(node, direction)) }
+                                }, { order ->
+                                    try { commit(document.reorder(order)) }
                                     catch (failure: IllegalArgumentException) { message = failure.message }
-                                }, Modifier.weight(1f))
+                                }, { node -> deleting = node }, { node ->
+                                    try { commit(document.duplicate(node)) } catch (failure: IllegalArgumentException) { message = failure.message }
+                                }, { sectionEditor = it.title.lowercase() }, Modifier.weight(1f))
                                 Button(onClick = { addParent = studioSections(document)[1].container?.id; addSection = "Body"; adding = true; addError = null },
                                     shape = MaterialTheme.shapes.small, modifier = Modifier.fillMaxWidth().padding(16.dp).heightIn(min = 48.dp)) {
                                     StudioIcon(StudioSymbol.ADD); Spacer(Modifier.width(8.dp)); Text("Add block")
@@ -210,7 +222,8 @@ fun ReceiptStudio(
                         if (wide && selectedNode != null && !sourceMode) {
                             VerticalDivider()
                             StudioProperties(document, selectedNode, ::commit, { addParent = it.id; adding = true }, onPickImage,
-                                Modifier.widthIn(max = 340.dp).weight(0.9f).fillMaxHeight(), draft.dataJson, onDismiss = { selection = null })
+                                Modifier.widthIn(max = 340.dp).weight(0.9f).fillMaxHeight(), draft.dataJson, onDismiss = { selection = null },
+                                onDelete = { deleting = it }, onLocalize = ::localize)
                         }
                     }
                     1 -> Column(Modifier.fillMaxSize()) {
@@ -226,7 +239,8 @@ fun ReceiptStudio(
                 if (selectedNode != null && !(wide && tab == 0) && !adding) {
                     ModalBottomSheet(onDismissRequest = { selection = null }, containerColor = MaterialTheme.colorScheme.surface, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
                         StudioProperties(document, selectedNode, ::commit, { addParent = it.id; adding = true }, onPickImage,
-                            Modifier.fillMaxWidth().heightIn(max = editorHeight).imePadding(), draft.dataJson, onDismiss = { selection = null })
+                            Modifier.fillMaxWidth().heightIn(max = editorHeight), draft.dataJson, onDismiss = { selection = null },
+                            onDelete = { deleting = it }, onLocalize = ::localize)
                     }
                 }
             }
@@ -255,69 +269,23 @@ fun ReceiptStudio(
     )
     message?.let { text -> AlertDialog(onDismissRequest = { message = null }, title = { Text("Receipt Studio") },
         text = { Text(text) }, confirmButton = { TextButton(onClick = { message = null }) { Text("OK") } }) }
+    deleting?.let { target -> AlertDialog(onDismissRequest = { deleting = null }, title = { Text("Delete this block?") },
+        text = { Text("The block and its contained blocks will be removed. You can undo this change.") },
+        confirmButton = { TextButton(onClick = {
+            try { document?.let { commit(deleteStudioBlock(it, target)) } }
+            catch (failure: IllegalArgumentException) { message = failure.message }
+            deleting = null
+        }) { Text("Delete") } }, dismissButton = { TextButton(onClick = { deleting = null }) { Text("Cancel") } }) }
+    if (sectionEditor != null && document != null) ModalBottomSheet(onDismissRequest = { sectionEditor = null },
+        containerColor = MaterialTheme.colorScheme.surface, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        StudioSectionEditor(document, sectionEditor!!, { next -> commit(next); sectionEditor = null }, { section ->
+            val current = studioSections(document).first { it.title.equals(section, ignoreCase = true) }
+            addParent = current.container?.id; addSection = current.title; sectionEditor = null; adding = true
+        }, ::localize, { node -> sectionEditor = null; selection = node.id })
+    }
 }
 
 private data class RenderedDraft(val draft: ReceiptStudioDraft, val receipt: Receipt, val engine: ReceiptScript, val args: Map<String, Any?>)
-
-@Composable
-private fun Outline(document: RctSourceDocument, selected: Int?, onSelect: (RctSourceNode) -> Unit,
-                    onAdd: (StudioSection) -> Unit, onMove: (RctSourceNode, Int) -> Unit, modifier: Modifier) {
-    val handleColor = MaterialTheme.colorScheme.onSurfaceVariant
-    val expanded = remember(document) { mutableStateListOf<Int>() }
-    val collapsedSections = remember { mutableStateListOf<String>() }
-    LazyColumn(modifier.fillMaxWidth(), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        fun androidx.compose.foundation.lazy.LazyListScope.rows(nodes: List<RctSourceNode>, depth: Int = 0) {
-            nodes.forEach { node ->
-                item(key = node.id) {
-                    val children = outlineChildren(document, node)
-                    OutlinedCard(onClick = { onSelect(node) }, shape = MaterialTheme.shapes.small,
-                        modifier = Modifier.fillMaxWidth().padding(start = (depth.coerceAtMost(3) * 12).dp),
-                        colors = CardDefaults.outlinedCardColors(containerColor = if (selected == node.id)
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.1f).compositeOver(MaterialTheme.colorScheme.surface) else MaterialTheme.colorScheme.surface)) {
-                        Row(Modifier.heightIn(min = 64.dp).padding(start = 12.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                            StudioIcon(blockSymbol(node.statement))
-                            Spacer(Modifier.width(12.dp))
-                            Column(Modifier.weight(1f).padding(vertical = 8.dp)) {
-                                Text(outlineTitle(document, node), maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                    style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-                                Text(outlineSubtitle(document, node), maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                            Box(Modifier.size(40.dp).semantics { contentDescription = "Hold and drag to reorder ${outlineTitle(document, node)}" }
-                                .pointerInput(document, node) {
-                                    var distance = 0f
-                                    detectDragGesturesAfterLongPress(onDragStart = { distance = 0f },
-                                        onDrag = { change, amount -> change.consume(); distance += amount.y },
-                                        onDragEnd = { if (kotlin.math.abs(distance) > 24.dp.toPx()) onMove(node, if (distance < 0) -1 else 1) })
-                                }.drawBehind {
-                                    for (column in 0..1) for (row in 0..2) drawCircle(handleColor, 1.2.dp.toPx(),
-                                        androidx.compose.ui.geometry.Offset(center.x + (column - 0.5f) * 5.dp.toPx(), center.y + (row - 1) * 5.dp.toPx()))
-                                })
-                            if (children.isNotEmpty()) IconButton(onClick = { if (node.id in expanded) expanded.remove(node.id) else expanded.add(node.id) }, modifier = Modifier.size(40.dp)) {
-                                StudioIcon(if (node.id in expanded) StudioSymbol.EXPAND else StudioSymbol.CHEVRON,
-                                    "${if (node.id in expanded) "Collapse" else "Expand"} ${outlineTitle(document, node)}")
-                            } else StudioIcon(StudioSymbol.CHEVRON, modifier = Modifier.padding(end = 8.dp).size(16.dp))
-                        }
-                    }
-                }
-                if (node.id in expanded) rows(outlineChildren(document, node), depth + 1)
-            }
-        }
-        studioSections(document).forEach { section ->
-            item(key = "section-${section.title}") {
-                Row(Modifier.fillMaxWidth().heightIn(min = 40.dp).clickable(enabled = section.nodes.isNotEmpty()) {
-                    if (section.title in collapsedSections) collapsedSections.remove(section.title) else collapsedSections.add(section.title)
-                }.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(section.title.uppercase(), Modifier.weight(1f), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    if (section.nodes.isEmpty()) TextButton(onClick = { onAdd(section) }, contentPadding = PaddingValues(horizontal = 8.dp)) { Text("Add ${section.title.lowercase()}", style = MaterialTheme.typography.labelMedium) }
-                    else StudioIcon(if (section.title in collapsedSections) StudioSymbol.CHEVRON else StudioSymbol.EXPAND,
-                        "${if (section.title in collapsedSections) "Expand" else "Collapse"} ${section.title}", Modifier.padding(8.dp).size(16.dp))
-                }
-            }
-            if (section.title !in collapsedSections) rows(section.nodes)
-        }
-    }
-}
 
 @Composable
 private fun PreviewPane(
@@ -333,11 +301,11 @@ private fun PreviewPane(
             TextButton(onClick = onFix) { Text("Review template / data") }
         }
         BoxWithConstraints(Modifier.weight(1f).fillMaxWidth().background(MaterialTheme.colorScheme.surfaceContainer).verticalScroll(rememberScrollState())) {
-            val paperWidth = (maxWidth - 40.dp).coerceAtMost(380.dp).coerceAtLeast(40.dp)
+            val paperWidth = (maxWidth - 32.dp).coerceAtLeast(40.dp)
             val viewportWidth = maxWidth
             if (receipt != null) {
                 Box(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), contentAlignment = Alignment.TopCenter) {
-                    Box(Modifier.width((paperWidth * zoom + 40.dp).coerceAtLeast(viewportWidth)).padding(20.dp), contentAlignment = Alignment.TopCenter) {
+                    Box(Modifier.width((paperWidth * zoom + 32.dp).coerceAtLeast(viewportWidth)).padding(16.dp), contentAlignment = Alignment.TopCenter) {
                         Surface(Modifier.width(paperWidth * zoom), shape = MaterialTheme.shapes.extraSmall, shadowElevation = 4.dp) {
                             ReceiptPreview(receipt)
                         }
@@ -345,20 +313,13 @@ private fun PreviewPane(
                 }
             } else Text("Your rendered receipt will appear here.", Modifier.padding(24.dp))
         }
-        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            OutlinedButton(onClick = { zoom = 1f }, shape = MaterialTheme.shapes.small) { Text("Fit width", style = MaterialTheme.typography.labelMedium) }
-            Spacer(Modifier.weight(1f))
-            OutlinedCard(shape = MaterialTheme.shapes.small) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { zoom = (zoom - 0.25f).coerceAtLeast(0.5f) }) { StudioIcon(StudioSymbol.MINUS, "Zoom out") }
-                    Text("${(zoom * 100).toInt()}%", style = MaterialTheme.typography.labelSmall)
-                    IconButton(onClick = { zoom = (zoom + 0.25f).coerceAtMost(3f) }) { StudioIcon(StudioSymbol.ADD, "Zoom in") }
-                }
-            }
-        }
-        if (onPrint != null || onExport != null) Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            if (onExport != null) OutlinedButton(onClick = onExport, shape = MaterialTheme.shapes.small, enabled = current && !busy, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { Text("Export") }
-            if (onPrint != null) Button(onClick = onPrint, shape = MaterialTheme.shapes.small, enabled = current && !busy, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { Text(if (busy) "Working..." else "Print") }
+        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            StudioIcon(StudioSymbol.ZOOM)
+            Slider(zoom, { zoom = it }, valueRange = 0.5f..3f, modifier = Modifier.weight(1f).semantics { contentDescription = "Receipt zoom" })
+            Text("${(zoom * 100).toInt()}%", style = MaterialTheme.typography.labelSmall)
+            if (onExport != null) FilledTonalIconButton(onClick = onExport, enabled = current && !busy) { StudioIcon(StudioSymbol.EXPORT, "Export receipt") }
+            if (onPrint != null) FilledIconButton(onClick = onPrint, enabled = current && !busy) { StudioIcon(StudioSymbol.PRINT, "Print receipt") }
         }
     }
 }

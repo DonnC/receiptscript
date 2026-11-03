@@ -25,6 +25,20 @@ import io.github.donnclab.rct.*
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class AndroidReceiptRendererTest {
     private val context: Context get() = RuntimeEnvironment.getApplication()
+
+    @Test fun `smooth display reuses layout without altering thermal pixels`() {
+        val receipt = AndroidReceiptRenderer(context).render(document)
+        val original = pixels(receipt)
+        val display = Bitmap.createBitmap(receipt.width * 3, receipt.height * 3, Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(display)
+        canvas.drawColor(Color.WHITE)
+        canvas.scale(3f, 3f)
+        requireNotNull(receipt.displayList).draw(canvas, 0, receipt.height)
+        val output = IntArray(display.width * display.height)
+        display.getPixels(output, 0, display.width, 0, 0, display.width, display.height)
+        assertTrue(output.any { it != Color.BLACK && it != Color.WHITE })
+        assertArrayEquals(original, pixels(receipt))
+    }
     private val document = RctCompiler().compile("""
         receipt "test"
         meta:

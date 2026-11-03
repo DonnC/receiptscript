@@ -31,10 +31,8 @@ internal class AndroidReceiptRenderer(
     /** [images] holds a decoded bitmap for every image source referenced by [receipt]. */
     fun render(receipt: ReceiptDocument, images: Map<String, Bitmap> = emptyMap()): Receipt = Job(receipt, images).render()
 
-    private data class Mark(val top: Int, val bottom: Int, val draw: (Canvas) -> Unit)
-
     private inner class Job(private val receipt: ReceiptDocument, private val images: Map<String, Bitmap>) {
-        private val marks = mutableListOf<Mark>()
+        private val marks = mutableListOf<ReceiptDrawMark>()
         private val contentWidth = options.width - options.padding * 2
         private var y = options.padding
         private val normal = ReceiptTextStyle(font = receipt.meta?.font ?: options.fontSize)
@@ -64,7 +62,7 @@ internal class AndroidReceiptRenderer(
         private fun text(text: String, style: ReceiptTextStyle, align: Layout.Alignment = Layout.Alignment.ALIGN_NORMAL) {
             val layout = layout(text, style, contentWidth, align)
             val top = y
-            marks += Mark(top, top + layout.height) { canvas ->
+            marks += ReceiptDrawMark(top, top + layout.height) { canvas ->
                 canvas.save(); canvas.translate(options.padding.toFloat(), top.toFloat()); layout.draw(canvas); canvas.restore()
             }
             advance(maxOf(layout.height, lineHeight(style)))
@@ -88,7 +86,7 @@ internal class AndroidReceiptRenderer(
                 val left = layout(block.key, block.style, contentWidth, Layout.Alignment.ALIGN_NORMAL)
                 val right = layout(block.value, block.style, contentWidth, Layout.Alignment.ALIGN_OPPOSITE)
                 val height = maxOf(left.height, right.height, lineHeight(block.style))
-                marks += Mark(top, top + height) { canvas ->
+                marks += ReceiptDrawMark(top, top + height) { canvas ->
                     canvas.save(); canvas.translate(options.padding.toFloat(), top.toFloat())
                     left.draw(canvas); right.draw(canvas); canvas.restore()
                 }
@@ -116,7 +114,7 @@ internal class AndroidReceiptRenderer(
             }) }
             val height = maxOf(layouts.maxOf { it.height }, lineHeight(style))
             val top = y
-            marks += Mark(top, top + height) { canvas ->
+            marks += ReceiptDrawMark(top, top + height) { canvas ->
                 var x = options.padding
                 layouts.forEachIndexed { index, cell ->
                     canvas.save(); canvas.translate(x.toFloat(), top.toFloat()); cell.draw(canvas); canvas.restore()
@@ -137,7 +135,7 @@ internal class AndroidReceiptRenderer(
             val top = y
             val left = (options.width - w) / 2
             val destination = Rect(left, top, left + w, top + h)
-            marks += Mark(top, top + h) { canvas -> canvas.drawBitmap(bitmap, null, destination, Paint()) }
+            marks += ReceiptDrawMark(top, top + h) { canvas -> canvas.drawBitmap(bitmap, null, destination, Paint()) }
             advance(h)
         }
 
@@ -182,7 +180,7 @@ internal class AndroidReceiptRenderer(
                         val width = count * paint(normal).measureText("0")
                         val top = y
                         val height = lineHeight()
-                        marks += Mark(top, top + height) { canvas ->
+                        marks += ReceiptDrawMark(top, top + height) { canvas ->
                             canvas.drawLine((options.width - width) / 2, top + height / 2f,
                                 (options.width + width) / 2, top + height / 2f, Paint().apply { color = Color.BLACK; strokeWidth = 1f })
                         }
@@ -208,7 +206,7 @@ internal class AndroidReceiptRenderer(
                 canvas.drawColor(Color.WHITE)
                 canvas.translate(0f, -top.toFloat())
                 marks.filter { it.bottom > top && it.top < top + height }.forEach { it.draw(canvas) }
-                // Quantize before previewing: no anti-alias or colour conversion is deferred to printing.
+                // Finalize thermal pixels here; smooth screen drawing uses the same recorded layout.
                 val pixels = IntArray(options.width * height)
                 bitmap.getPixels(pixels, 0, options.width, 0, 0, options.width, height)
                 pixels.indices.forEach { index ->
@@ -219,7 +217,7 @@ internal class AndroidReceiptRenderer(
                 bitmap.setPixels(pixels, 0, options.width, 0, 0, options.width, height)
                 requireNotNull(bitmap.copy(Bitmap.Config.ARGB_8888, false)).also { bitmap.recycle() }
             }
-            return Receipt(receipt, options.width, bands, images)
+            return Receipt(receipt, options.width, bands, images, ReceiptDisplayList(options.width, marks.toList()))
         }
     }
 }
