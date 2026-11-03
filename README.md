@@ -157,6 +157,10 @@ Open the repository in Android Studio and run **ReceiptScript Starter**. Pick a 
 retail, discount, fiscal-style or end-of-day) and swipe between the rendered receipt, its
 [`.rct` template](example/src/main/assets/receipts) and its sample data; print from the app bar. Connect your printer in [`SamplePrinter.kt`](example/src/main/java/io/github/donnclab/rct/sample/SamplePrinter.kt).
 
+**Edit** opens the optional Android [Studio](docs/guides/studio.md): a single-template Compose
+workspace with block properties, a JSON editor and the same core-rendered receipt preview.
+Studio inherits your app's theme; your app supplies saving, images and output actions.
+
 ## Contributing
 
 Issues and pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) to set up the project

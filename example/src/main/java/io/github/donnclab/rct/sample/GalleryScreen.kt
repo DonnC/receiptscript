@@ -48,7 +48,8 @@ fun ReceiptGalleryScreen(
     initialTab: Int = 0,
     onSelect: (SampleExample) -> Unit = {},
     onBack: () -> Unit = {},
-    onPrint: () -> Unit = {}
+    onPrint: () -> Unit = {},
+    onEdit: (() -> Unit)? = null
 ) {
     val example = state.selected
     Scaffold(
@@ -60,7 +61,12 @@ fun ReceiptGalleryScreen(
                         Icon(painterResource(R.drawable.ic_arrow_back), contentDescription = "Back to samples")
                     }
                 },
-                actions = { if (example != null) PrintAction(state, onPrint) },
+                actions = {
+                    if (example != null) {
+                        if (onEdit != null) TextButton(onClick = onEdit, enabled = state.sample != null) { Text("Edit") }
+                        PrintAction(state, onPrint)
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
             )
         }

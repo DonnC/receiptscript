@@ -12,6 +12,7 @@ licenses; do not remove required notices from redistributed artifacts.
 | AndroidX Compose | In-app receipt preview | Apache-2.0, https://android.googlesource.com/platform/frameworks/support/ |
 | Material Design icons | "print" and "arrow back" vector icons in the example app | Apache-2.0, https://github.com/google/material-design-icons |
 | Kotlin coroutines | Background rendering and suspending printer integration | Apache-2.0, https://github.com/Kotlin/kotlinx.coroutines |
+| Kotlin serialization | Strict JSON sample-data editing in the optional Studio module | Apache-2.0, https://github.com/Kotlin/kotlinx.serialization |
 | Gradle wrapper | Reproducible builds | Apache-2.0, https://github.com/gradle/gradle |
 | JUnit | JVM tests | EPL-1.0, https://junit.org/junit4/ |
 | esbuild | Extension bundling, development only | MIT, https://github.com/evanw/esbuild |

@@ -7,6 +7,21 @@ changes; each one is listed with a migration note.
 
 ## [Unreleased]
 
+### Added
+
+- Optional Android `studio` module: a theme-inheriting, adaptive single-template Compose editor,
+  strict JSON sample-data editor, core receipt preview, undo/redo and host-owned save/output callbacks.
+- Source-preserving core authoring APIs and property forms, including table configuration.
+- An Edit action, private draft persistence, PDF export and phone/tablet Studio layout previews
+  in the example app. Studio is not yet a published release artifact.
+
+### Fixed
+
+- Numeric overflow in template source is reported as a lint diagnostic rather than escaping the linter.
+- Studio mobile layout now follows the section-based design, with compact block rows, native
+  switches, a pinned Done action and advanced tools moved into menus. Simple bindings expose
+  data-field and formatter controls without rewriting composite expressions.
+
 ## [0.7.0] - Unreleased
 
 A smaller, clearer API under a new package. See the [migration guide](docs/migration/0.7.md).

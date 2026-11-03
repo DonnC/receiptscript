@@ -1,7 +1,6 @@
 package io.github.donnclab.rct.tooling
 
 import io.github.donnclab.rct.DefaultRctParser
-import io.github.donnclab.rct.RctParseException
 
 /** A problem found in template source, with a 1-based [line] and [column]. */
 public data class RctLintIssue(
@@ -23,7 +22,7 @@ public object RctLinter {
 
         try {
             DefaultRctParser().parse(source)
-        } catch (e: RctParseException) {
+        } catch (e: IllegalArgumentException) {
             issues += parseIssueFromException(e)
         }
 
@@ -45,7 +44,7 @@ public object RctLinter {
             }
     }
 
-    private fun parseIssueFromException(exception: RctParseException): RctLintIssue {
+    private fun parseIssueFromException(exception: IllegalArgumentException): RctLintIssue {
         val line = Regex("""[Ll]ine (\d+)""").find(exception.message.orEmpty())
             ?.groupValues
             ?.getOrNull(1)

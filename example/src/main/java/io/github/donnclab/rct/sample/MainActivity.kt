@@ -12,6 +12,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import io.github.donnclab.rct.AssetImageResolver
@@ -24,7 +25,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /*
- * The starter app. Everything that touches ReceiptScript is in this file:
+ * The gallery host. Studio reuses this engine and its sample documents:
  *  - one ReceiptScript, created with the driver from SamplePrinter.kt
  *  - render(id, data) when a sample is opened, print(receipt) from the app bar
  * GalleryScreen.kt only draws state; SampleCatalog.kt reads the bundled templates and sample data.
@@ -55,22 +56,31 @@ fun ReceiptGallery(printer: ReceiptDriver? = null) {
     val receipts = remember(context, printer) { sampleReceipts(context, printer) }
     val scope = rememberCoroutineScope()
 
-    var selected by remember { mutableStateOf<SampleExample?>(null) }
+    var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
+    val selected = SampleCatalog.examples.firstOrNull { it.id == selectedId }
     var sample by remember { mutableStateOf<SampleSource?>(null) }
     var receipt by remember { mutableStateOf<Result<Receipt>?>(null) }
     var printing by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
+    var editing by rememberSaveable { mutableStateOf(false) }
+    var reload by remember { mutableIntStateOf(0) }
 
     // Load the template and its sample data, then render. A render error still leaves the
     // Template and Data tabs readable, which is where the mistake usually is.
-    LaunchedEffect(selected) {
+    LaunchedEffect(selected, reload) {
         sample = null
         receipt = null
         val example = selected ?: return@LaunchedEffect
-        val source = withContext(Dispatchers.IO) { catalog.open(example) }
+        val source = withContext(Dispatchers.IO) {
+            val file = android.util.AtomicFile(context.filesDir.resolve("studio-drafts/${example.id}.json"))
+            if (file.baseFile.exists()) {
+                val stored = org.json.JSONObject(String(file.readFully(), Charsets.UTF_8))
+                SampleSource(stored.getString("source"), stored.getString("dataJson"))
+            } else catalog.open(example)
+        }
         sample = source
         receipt = try {
-            Result.success(receipts.render(example.id, catalog.data(source)))
+            Result.success(receipts.renderSource(source.source, catalog.data(source)))
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (failure: Exception) {
@@ -78,12 +88,18 @@ fun ReceiptGallery(printer: ReceiptDriver? = null) {
         }
     }
 
-    BackHandler(enabled = selected != null && !printing) { selected = null }
+    BackHandler(enabled = selected != null && !printing && !editing) { selectedId = null }
+
+    if (editing && selected != null && sample != null) {
+        SampleStudio(selected, sample!!, receipts, printer != null, onClose = { editing = false; reload++ })
+        return
+    }
 
     ReceiptGalleryScreen(
         state = GalleryUiState(selected, sample, receipt, printing, printerConnected = printer != null),
-        onSelect = { selected = it },
-        onBack = { selected = null },
+        onSelect = { selectedId = it.id },
+        onBack = { selectedId = null },
+        onEdit = { editing = true },
         onPrint = {
             val ready = receipt?.getOrNull() ?: return@ReceiptGalleryScreen
             if (printer == null) {
