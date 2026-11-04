@@ -22,6 +22,8 @@ import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -99,6 +101,17 @@ internal fun Outline(document: RctSourceDocument, selected: Int?, onSelect: (Rct
                     val children = outlineChildren(document, node)
                     OutlinedCard(onClick = { onSelect(node) }, shape = MaterialTheme.shapes.small,
                         modifier = animation.fillMaxWidth().padding(start = (depth.coerceAtMost(3) * 10).dp).zIndex(if (active) 1f else 0f)
+                            .semantics {
+                                val siblings = nodes.filter { it.parentId == node.parentId }
+                                val index = siblings.indexOfFirst { it.id == node.id }
+                                customActions = listOf(-1 to "Move up", 1 to "Move down").mapNotNull { (direction, label) ->
+                                    val target = index + direction
+                                    if (target !in siblings.indices) null else CustomAccessibilityAction(label) {
+                                        onReorder(siblings.toMutableList().apply { this[index] = siblings[target]; this[target] = node })
+                                        true
+                                    }
+                                }
+                            }
                             .graphicsLayer {
                                 translationY = if (active) drag.desiredTop - (list.layoutInfo.visibleItemsInfo.firstOrNull { it.key == node.id }?.offset ?: 0) else 0f
                                 shadowElevation = if (active) 8.dp.toPx() else 0f

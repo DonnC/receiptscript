@@ -67,13 +67,15 @@ class ReceiptStudioTest {
         compose.runOnIdle { assertTrue(state.draft.dataJson.contains('\n')) }
     }
 
-    @Test fun booleanPropertiesAreAccessibleSwitchesAndPreserveBindings() {
+    @Test fun textToolbarTogglesPreserveBindingsWithoutAnOverflowMenu() {
         val state = ReceiptStudioState(ReceiptStudioDraft(source, "{\"total\":10}"))
         val engine = ReceiptScript(ApplicationProvider.getApplicationContext())
         compose.setContent { MaterialTheme { ReceiptStudio(state, engine) } }
         compose.onNodeWithText("TOTAL").performClick()
         compose.onNodeWithContentDescription("Bold").assertIsOff().performClick().assertIsOn()
         compose.onNodeWithContentDescription("Underline").assertIsOff().performClick().assertIsOn()
+        compose.onNodeWithContentDescription("Block actions").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Align left").assertDoesNotExist()
         compose.onNodeWithText("On").assertDoesNotExist()
         compose.onNodeWithText("Off").assertDoesNotExist()
         compose.onNodeWithText("Done").performClick()
@@ -87,7 +89,7 @@ class ReceiptStudioTest {
         val engine = ReceiptScript(ApplicationProvider.getApplicationContext())
         compose.setContent { MaterialTheme { ReceiptStudio(state, engine) } }
         compose.onNodeWithText("TOTAL").performClick()
-        compose.onNodeWithText("Formatter").performClick()
+        compose.onNodeWithText("Format").performClick()
         compose.onNodeWithText("Money").performClick()
         compose.onNodeWithText("Currency field or code").performTextReplacement("USD")
         compose.onNodeWithText("Done").performClick()
@@ -157,5 +159,60 @@ class ReceiptStudioTest {
             state.undo()
             assertEquals(original, state.draft.source)
         }
+    }
+
+    @Test fun toolbarAlignmentAndSizeWriteExistingSyntax() {
+        val state = ReceiptStudioState(ReceiptStudioDraft("receipt \"x\"\ncenter small \"{{name}}\"", "{\"name\":\"Merchant\"}"))
+        compose.setContent { MaterialTheme { ReceiptStudio(state, ReceiptScript(ApplicationProvider.getApplicationContext())) } }
+        compose.onNodeWithText("Name", substring = false).performClick()
+        val align = compose.onNodeWithContentDescription("Align right")
+        val underline = compose.onNodeWithContentDescription("Underline")
+        assertEquals(align.fetchSemanticsNode().boundsInRoot.center.y, underline.fetchSemanticsNode().boundsInRoot.center.y, 1f)
+        align.performClick().assertIsOn()
+        compose.onNodeWithContentDescription("Text size").performClick()
+        compose.onNodeWithText("Large").performClick()
+        compose.onNodeWithText("Done").performClick()
+        compose.runOnIdle { assertTrue(state.draft.source.contains("right big \"{{name}}\"")) }
+    }
+
+    @Test fun maskControlsWorkForNonCardData() {
+        val state = ReceiptStudioState(ReceiptStudioDraft("receipt \"x\"\nleft \"{{nationalId}}\"", "{\"nationalId\":\"63123456456\"}"))
+        compose.setContent { MaterialTheme { ReceiptStudio(state, ReceiptScript(ApplicationProvider.getApplicationContext())) } }
+        compose.onNodeWithText("National Id").performClick()
+        compose.onNodeWithText("Format").performClick()
+        compose.onNodeWithText("Mask", substring = false).performScrollTo().performClick()
+        compose.onNodeWithText("Show first").performTextReplacement("2")
+        compose.onNodeWithText("Show last").performTextReplacement("3")
+        compose.onNodeWithText("Done").performClick()
+        compose.runOnIdle { assertTrue(state.draft.source.contains("mask:2,3")) }
+    }
+
+    @Test fun imageSheetNeverOffersTextFormatting() {
+        val state = ReceiptStudioState(ReceiptStudioDraft("receipt \"x\"\nimage \"{{logo}}\" 160 80", "{\"logo\":\"asset:logo.png\"}"))
+        compose.setContent { MaterialTheme { ReceiptStudio(state, ReceiptScript(ApplicationProvider.getApplicationContext())) } }
+        compose.onNodeWithText("Image", substring = false).performClick()
+        compose.onNodeWithText("Image source").assertExists()
+        compose.onNodeWithText("Format").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Bold").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Block actions").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Choose Image source data field").assertExists()
+    }
+
+    @Test fun customSizeCanBeAppliedAndPresetClearsOverride() {
+        val state = ReceiptStudioState(ReceiptStudioDraft("receipt \"x\"\nleft \"Title\" 21", "{}"))
+        val engine = ReceiptScript(ApplicationProvider.getApplicationContext())
+        compose.setContent { MaterialTheme { ReceiptStudio(state, engine) } }
+        compose.onNodeWithText("Title").performClick()
+        compose.onNodeWithContentDescription("Text size").performClick()
+        compose.onNodeWithText("Custom: 21 dots").performClick()
+        compose.onNodeWithText("Size in dots").performTextReplacement("25")
+        compose.onNodeWithText("Apply").performClick()
+        compose.onNodeWithText("Done").performClick()
+        compose.runOnIdle { assertTrue(state.draft.source.contains("left \"Title\" 25")) }
+        compose.onNodeWithText("Title").performClick()
+        compose.onNodeWithContentDescription("Text size").performClick()
+        compose.onNodeWithText("Small").performClick()
+        compose.onNodeWithText("Done").performClick()
+        compose.runOnIdle { assertTrue(state.draft.source.contains("left small \"Title\"")); assertFalse(state.draft.source.contains("25")) }
     }
 }

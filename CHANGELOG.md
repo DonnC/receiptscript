@@ -9,6 +9,8 @@ changes; each one is listed with a migration note.
 
 ### Added
 
+- Studio text-format toolbar, custom-size menu, general mask controls and core-evaluated field
+  samples. Media sheets expose only applicable properties; the example supports image selection.
 - Optional Android `studio` module: a theme-inheriting, adaptive single-template Compose editor,
   strict JSON sample-data editor, core receipt preview, undo/redo and host-owned save/output callbacks.
 - Source-preserving core authoring APIs and property forms, including table configuration.

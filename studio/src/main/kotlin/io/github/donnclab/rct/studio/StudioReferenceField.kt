@@ -15,11 +15,10 @@ import androidx.compose.ui.unit.dp
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun StudioReferenceField(label: String, value: String, fields: List<StudioDataField>, onChange: (String) -> Unit,
-                                  modifier: Modifier = Modifier, reference: Boolean = fields.any { it.path == value },
+                                  modifier: Modifier = Modifier,
                                   onSelect: (String) -> Unit = onChange, onLiteral: (() -> Unit)? = null) {
     var picking by remember { mutableStateOf(false) }
     OutlinedTextField(value, onChange, label = { Text(label, style = MaterialTheme.typography.bodySmall) },
-        leadingIcon = if (reference) ({ StudioIcon(StudioSymbol.LINK) }) else null,
         trailingIcon = { IconButton(onClick = { picking = true }) { StudioIcon(StudioSymbol.LINK, "Choose $label data field") } },
         singleLine = true, textStyle = MaterialTheme.typography.bodyMedium, shape = MaterialTheme.shapes.small,
         keyboardOptions = KeyboardOptions(autoCorrectEnabled = false), modifier = modifier.fillMaxWidth())

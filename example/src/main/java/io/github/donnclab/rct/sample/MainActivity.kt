@@ -16,7 +16,6 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import io.github.donnclab.rct.AssetImageResolver
 import io.github.donnclab.rct.Receipt
 import io.github.donnclab.rct.ReceiptDriver
 import io.github.donnclab.rct.ReceiptScript
@@ -54,7 +53,7 @@ class MainActivity : ComponentActivity() {
  * images resolve from the same folder, so `asset:logo.png` works here and in the VS Code preview.
  */
 fun sampleReceipts(context: Context, printer: ReceiptDriver? = null): ReceiptScript =
-    ReceiptScript(context, printer, images = AssetImageResolver(context, directory = "receipts"))
+    ReceiptScript(context, printer, images = SampleImages(context))
 
 @Composable
 fun ReceiptGallery(printer: ReceiptDriver? = null) {

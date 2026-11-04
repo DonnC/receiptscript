@@ -18,6 +18,7 @@ import kotlinx.coroutines.withContext
 internal fun SampleStudio(example: SampleExample, sample: SampleSource, engine: ReceiptScript, canPrint: Boolean, onClose: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val pickImage = rememberStudioImagePicker()
     val state = rememberReceiptStudioState(sample.source, sample.contextJson)
     var leaving by remember { mutableStateOf(false) }
     var pdf by remember { mutableStateOf<ByteArray?>(null) }
@@ -45,6 +46,7 @@ internal fun SampleStudio(example: SampleExample, sample: SampleSource, engine: 
             }
         },
         onPrint = if (canPrint) engine::print else null,
+        onPickImage = pickImage,
         onExport = { receipt ->
             pdf = withContext(Dispatchers.Default) { receipt.toPdf().bytes }
             destination.launch("${example.id}.pdf")

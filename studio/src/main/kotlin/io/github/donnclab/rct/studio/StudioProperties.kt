@@ -12,6 +12,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
 import io.github.donnclab.rct.tooling.*
 import io.github.donnclab.rct.ReceiptColumnAlign
+import io.github.donnclab.rct.ReceiptScript
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
@@ -25,8 +26,9 @@ internal fun StudioProperties(
     modifier: Modifier = Modifier,
     dataJson: String = "{}",
     onDismiss: (() -> Unit)? = null,
-    onDelete: (RctSourceNode) -> Unit = {},
-    onLocalize: ((String) -> Unit)? = null
+    onLocalize: ((String) -> Unit)? = null,
+    previewEngine: ReceiptScript? = null,
+    args: Map<String, Any?> = emptyMap()
 ) {
     val form = remember(node) { RctStatementForm.read(node.statement) }
     val values = remember(node) { mutableStateMapOf<String, String>().apply { form.properties.forEach { put(it.key, it.value) } } }
@@ -34,10 +36,12 @@ internal fun StudioProperties(
     val scope = rememberCoroutineScope()
     val focus = LocalFocusManager.current
     var picking by remember { mutableStateOf(false) }
-    var actions by remember(node) { mutableStateOf(false) }
+    val toolbarKeys = remember(node) { studioToolbarKeys(node.statement) }
+    val kind = node.statement.substringBefore(' ').removeSuffix(":")
     val fieldErrors = remember(node) { mutableStateMapOf<String, String>() }
     val table = remember(node) { if (node.statement == "table:") StudioTableDraft(document, node) else null }
-    val fields = remember(dataJson, document, node) { runCatching { studioDataFields(StudioJson.parse(dataJson), document, node) }.getOrDefault(emptyList()) }
+    val data = remember(dataJson) { runCatching { StudioJson.parse(dataJson) }.getOrNull() }
+    val fields = remember(data, document, node) { data?.let { studioDataFields(it, document, node) }.orEmpty() }
     fun change(action: () -> RctSourceDocument) {
         try {
             val next = action()
@@ -48,22 +52,15 @@ internal fun StudioProperties(
     Column(modifier) {
         Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(outlineTitle(document, node), Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
-            Box {
-                IconButton(onClick = { actions = true }) { StudioIcon(StudioSymbol.MORE, "Block actions") }
-                DropdownMenu(actions, { actions = false }) {
-                    listOf("Move up" to { change { document.move(node, -1) } },
-                        "Move down" to { change { document.move(node, 1) } },
-                        "Duplicate" to { change { document.duplicate(node) } },
-                        "Delete block" to { onDelete(node) }).forEach { (label, action) ->
-                        DropdownMenuItem(text = { Text(label) }, onClick = { actions = false; action() })
-                    }
-                }
-            }
             if (onDismiss != null) IconButton(onClick = onDismiss) { StudioIcon(StudioSymbol.CLOSE, "Close properties") }
         }
+        if (toolbarKeys.isNotEmpty()) Box(Modifier.padding(horizontal = 16.dp)) {
+            StudioTextToolbar(values, toolbarKeys) { key, value -> values[key] = value }
+        }
         Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        if (kind == "image" && previewEngine != null) StudioImageSample(previewEngine, form, values.toMap(), data, args)
         if (table != null) TableProperties(table, fields, { key, failure -> if (failure == null) fieldErrors.remove(key) else fieldErrors[key] = failure })
-        form.properties.sortedBy { when (it.key) { "bold", "underline" -> 2; "font" -> 1; else -> 0 } }.forEach { property -> key(node, property.key) {
+        form.properties.filterNot { it.key in toolbarKeys || (kind in setOf("image", "barcode") && it.key in setOf("width", "height")) }.forEach { property -> key(node, property.key) {
             val value = values.getValue(property.key)
             val changeValue: (String) -> Unit = { values[property.key] = it }
             when {
@@ -71,8 +68,9 @@ internal fun StudioProperties(
                 property.key in form.bindingProperties && property.multiline -> StudioCellsField(value, fields, changeValue,
                     { failure -> if (failure == null) fieldErrors.remove(property.key) else fieldErrors[property.key] = failure })
                 property.key in form.bindingProperties -> StudioValueField(
-                    if (property.key == "label") "Label" else if (property.key == "content") "Content" else if (node.statement.startsWith("kv ")) "Value" else "Text",
-                    value, fields, changeValue, { failure -> if (failure == null) fieldErrors.remove(property.key) else fieldErrors[property.key] = failure })
+                    if (kind == "image") "Image source" else if (property.key == "label") "Label" else if (property.key == "content") "Content" else if (node.statement.startsWith("kv ")) "Value" else "Text",
+                    value, fields, changeValue, { failure -> if (failure == null) fieldErrors.remove(property.key) else fieldErrors[property.key] = failure },
+                    allowFormat = studioAllowsFormat(node.statement, property.key), data = data)
                 property.key in form.pathProperties -> StudioReferenceField(property.label, value, fields.filterNot { '[' in it.path }, changeValue)
                 property.choices.isNotEmpty() && property.choices.size <= 4 -> StudioChoices(if (property.key == "style") "Text size" else property.label, value, property.choices, changeValue)
                 property.choices.isNotEmpty() -> StudioDropdown(property.label, value, property.choices.map { it to it.uppercase() }, changeValue)
@@ -95,7 +93,16 @@ internal fun StudioProperties(
                     catch (failure: Exception) { error = failure.message ?: "Image selection failed." }
                     finally { picking = false }
                 }
-            }, enabled = !picking) { Text(if (picking) "Selecting image..." else "Choose image") }
+            }, enabled = !picking, modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.small) {
+                StudioIcon(StudioSymbol.IMAGE); Spacer(Modifier.width(8.dp)); Text(if (picking) "Selecting image..." else "Choose image")
+            }
+        }
+        if (kind in setOf("image", "barcode")) {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                StudioField("Width (dots)", values["width"].orEmpty(), { values["width"] = it }, Modifier.weight(1f), numeric = true)
+                StudioField("Height (dots)", values["height"].orEmpty(), { values["height"] = it }, Modifier.weight(1f), numeric = true)
+            }
+            Text(if (kind == "image") "Leave dimensions blank to use the image size." else "Leave dimensions blank to use the renderer defaults.", style = MaterialTheme.typography.bodySmall)
         }
         if (node.statement.endsWith(':') && node.statement != "meta:") {
             OutlinedButton(onClick = { onAdd(node) }) { Text("Add block inside") }

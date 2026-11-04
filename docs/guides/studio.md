@@ -33,9 +33,11 @@ a reference that the configured image resolver understands; Studio never downloa
 **Design** groups compact block rows into Header, Body and Footer in core print order. Receipt
 names and metadata are in the Studio options menu rather than taking up outline space. Tables
 and other nested blocks expand on demand. Tap a row to open its properties and choose **Done**
-to apply the edit. Boolean properties use switches; size/alignment use compact single-choice
-controls. Text and key/value properties include
-the existing trailing numeric font size, size tokens, bold and underline. Tables retain their
+to apply the edit. Text properties use a single-row editor toolbar for alignment, size, bold
+and underline. Key/value blocks omit alignment because core positions their label and value.
+The size menu offers Small, Normal, Large and Custom dots, using the existing template syntax;
+choosing a preset clears an explicit font override. Property sheets have a close button, not an
+actions menu. Tables retain their
 headings, per-column width/alignment controls, rows, conditions and loops as editable child statements.
 Switches select default equal widths and centred alignment; advanced numeric configuration is not
 shown until those defaults are turned off. Header
@@ -43,12 +45,17 @@ and footer references remain references. Core, not their position in the outline
 the final header/body/footer print order and footer spacing.
 
 Simple bindings have a field picker based on the current JSON and native formatter controls,
-including currency for money. Composite text and advanced filter chains remain editable as
+including currency for money and general masking (visible prefix/suffix and mask character).
+Live field samples are evaluated by core; invalid edits do not show a stale unmasked sample.
+Images, QR codes and barcodes support bindings without text formatter/style controls. Image
+previews use the host engine and resolver; selecting another image requires `onPickImage`.
+The example demonstrates Android's document picker and persists access to selected image URIs.
+Composite text and advanced filter chains remain editable as
 expressions and are never silently reduced to a simple binding. Core parses and writes bindings.
 
 The Add block sheet provides a block grid and section/container selector. Each block has
 duplicate/delete icons; deletion asks for confirmation. Drag its handle to reorder siblings,
-with live placement and edge scrolling, or use the accessible move actions in properties.
+with live placement and edge scrolling.
 Core validates each operation before committing it. Deleting the only child of a required
 condition or loop is rejected; deleting the last local section block clears that optional section.
 Each section has independent Add and Edit actions. Header/footer references can be configured

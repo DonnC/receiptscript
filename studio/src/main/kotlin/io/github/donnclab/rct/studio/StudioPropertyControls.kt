@@ -76,11 +76,12 @@ internal fun StudioDropdown(label: String, value: String, choices: List<Pair<Str
 }
 
 private val formatters = listOf("" to "None", "money" to "Money", "date" to "Date", "datetime" to "Date & time",
-    "upper" to "Uppercase", "lower" to "Lowercase", "maskPan" to "Masked card number")
+    "upper" to "Uppercase", "lower" to "Lowercase", "mask" to "Mask", "maskPan" to "Card number")
 
 /** Advanced/composite expressions stay intact; simple bindings get the familiar field/format UI. */
 @Composable
-internal fun StudioValueField(label: String, initial: String, fields: List<StudioDataField>, onChange: (String) -> Unit, onError: (String?) -> Unit) {
+internal fun StudioValueField(label: String, initial: String, fields: List<StudioDataField>, onChange: (String) -> Unit, onError: (String?) -> Unit,
+                              allowFormat: Boolean = true, data: Any? = null) {
     var binding by remember { mutableStateOf(RctBindingForm.read(initial)?.takeIf { it.filters.size <= 1 && (it.filters.isEmpty() || formatters.any { option -> option.first == it.filters[0].name }) }) }
     var literal by remember { mutableStateOf(initial) }
     var lastEmitted by remember { mutableStateOf(initial) }
@@ -94,24 +95,48 @@ internal fun StudioValueField(label: String, initial: String, fields: List<Studi
     }
     fun update(next: RctSourceBinding) {
         binding = next
-        try { lastEmitted = RctBindingForm.write(next); onChange(lastEmitted); onError(null) }
+        try {
+            val filter = next.filters.singleOrNull()
+            if (filter?.name == "mask") require(studioMaskError(filter.args) == null) { studioMaskError(filter.args)!! }
+            lastEmitted = RctBindingForm.write(next); onChange(lastEmitted); onError(null)
+        }
         catch (failure: IllegalArgumentException) { onError(failure.message) }
     }
     val current = binding
     StudioReferenceField(label, current?.path ?: literal, fields, {
         if (current != null) update(current.copy(path = it)) else { literal = it; lastEmitted = it; onChange(it) }
-    }, reference = current != null, onSelect = { path -> update((current ?: RctSourceBinding(path)).copy(path = path)) },
+    }, onSelect = { path -> update((current ?: RctSourceBinding(path)).copy(path = path)) },
         onLiteral = if (current == null) null else ({ literal = ""; binding = null; lastEmitted = ""; onChange(""); onError(null) }))
-    if (current != null) {
+    if (current != null && allowFormat) {
         val filter = current.filters.firstOrNull()
         val formatter = filter?.name.orEmpty()
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            StudioDropdown("Formatter", formatter, formatters, { chosen ->
-                update(current.copy(filters = if (chosen.isEmpty()) emptyList() else listOf(RctSourceFilter(chosen))))
+            StudioDropdown("Format", formatter, formatters, { chosen ->
+                update(current.copy(filters = if (chosen.isEmpty()) emptyList() else listOf(RctSourceFilter(chosen,
+                    if (chosen == "mask") listOf("0", "0") else emptyList()))))
             }, Modifier.weight(1f))
             if (formatter == "money") StudioReferenceField("Currency field or code", filter!!.args.firstOrNull().orEmpty(), fields, { currency ->
                 update(current.copy(filters = listOf(filter.copy(args = if (currency.isBlank()) emptyList() else listOf(currency)))))
             }, Modifier.weight(1f))
+        }
+        if (formatter == "mask") {
+            val args = filter!!.args
+            fun maskArgument(index: Int, value: String) {
+                val next = mutableListOf(args.getOrNull(0) ?: "0", args.getOrNull(1) ?: "0", studioMaskCharacter(args.getOrNull(2)))
+                next[index] = value
+                update(current.copy(filters = listOf(filter.copy(args = studioMaskArguments(next[0], next[1], next[2])))))
+            }
+            OutlinedCard(shape = MaterialTheme.shapes.small, modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Mask settings", style = MaterialTheme.typography.labelLarge)
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        StudioReferenceField("Show first", args.getOrNull(0) ?: "0", fields, { maskArgument(0, it) }, Modifier.weight(1f))
+                        StudioReferenceField("Show last", args.getOrNull(1) ?: "0", fields, { maskArgument(1, it) }, Modifier.weight(1f))
+                    }
+                    StudioReferenceField("Mask character", studioMaskCharacter(args.getOrNull(2)), fields, { maskArgument(2, it) })
+                }
+            }
+            Text("Works with any text value.", style = MaterialTheme.typography.bodySmall)
         }
         if (formatter == "date" || formatter == "datetime") {
             var advanced by remember { mutableStateOf(false) }
@@ -126,5 +151,10 @@ internal fun StudioValueField(label: String, initial: String, fields: List<Studi
                 })
             }
         }
+    }
+    val preview = remember(initial, data, allowFormat) { if (allowFormat && data != null) studioValuePreview(initial, data) else null }
+    // Do not show an older, potentially unmasked sample while a binding edit is invalid.
+    if (preview != null && (current == null || runCatching { RctBindingForm.write(current) }.getOrNull() == initial)) {
+        Text(preview, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 3)
     }
 }

@@ -223,7 +223,7 @@ fun ReceiptStudio(
                             VerticalDivider()
                             StudioProperties(document, selectedNode, ::commit, { addParent = it.id; adding = true }, onPickImage,
                                 Modifier.widthIn(max = 340.dp).weight(0.9f).fillMaxHeight(), draft.dataJson, onDismiss = { selection = null },
-                                onDelete = { deleting = it }, onLocalize = ::localize)
+                                onLocalize = ::localize, previewEngine = receiptScript, args = args)
                         }
                     }
                     1 -> Column(Modifier.fillMaxSize()) {
@@ -240,7 +240,7 @@ fun ReceiptStudio(
                     ModalBottomSheet(onDismissRequest = { selection = null }, containerColor = MaterialTheme.colorScheme.surface, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
                         StudioProperties(document, selectedNode, ::commit, { addParent = it.id; adding = true }, onPickImage,
                             Modifier.fillMaxWidth().heightIn(max = editorHeight), draft.dataJson, onDismiss = { selection = null },
-                            onDelete = { deleting = it }, onLocalize = ::localize)
+                            onLocalize = ::localize, previewEngine = receiptScript, args = args)
                     }
                 }
             }
